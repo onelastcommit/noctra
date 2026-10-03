@@ -253,9 +253,10 @@ func (p *Pipeline) process(ctx context.Context, issue source.Ticket) {
 
 	if runErr != nil {
 		attempts := p.bumpFailed(id)
-		detail := agent.FailureDetail(output, runErr)
+		failure := describeAgentFailure(backend, output, runErr)
+		detail := failure.detail
 		logger.Warn("agent exited with error",
-			"err", runErr, "detail", detail, "attempt", attempts, "max", p.cfg.MaxRetries)
+			"err", runErr, "detail", detail, "auth", failure.auth, "attempt", attempts, "max", p.cfg.MaxRetries)
 		p.ticketBackToTrigger(ctx, issue, fmt.Sprintf(
 			"❌ **Noctra: Agent failed** (attempt %d/%d)\n\nThe agent exited with an error:\n\n```\n%s\n```\n\nWill retry on next poll cycle (up to %d attempts).\n\nTicket moved back to **%s**.",
 			attempts, p.cfg.MaxRetries, detail, p.cfg.MaxRetries, p.cfg.TriggerState))

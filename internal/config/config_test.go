@@ -22,6 +22,7 @@ var noctraEnvKeys = []string{
 	"AUTO_ITERATE_PRS", "MAX_PR_ITERATIONS", "PR_POLL_INTERVAL",
 	"TRUSTED_REVIEWERS", "STATE_DB", "STATE_FILE",
 	"MAX_DAILY_TOKENS", "MAX_DAILY_USD", "AGENT_MAX_TOKENS", "RATE_LIMIT_STRATEGY", "RATE_LIMIT_COOLDOWN",
+	"AUTH_CHECK_SCHEDULE",
 	"SWEEP_ENABLED", "SWEEP_SCHEDULE", "SWEEP_INTERVAL", "SWEEP_MAX_TASKS", "SWEEP_TIMEOUT_MINUTES", "SWEEP_TASKS",
 }
 
@@ -918,5 +919,28 @@ func TestLoad_GitHubAuthSettings(t *testing.T) {
 	cfg.GitHubAuthMode = "sometimes"
 	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "GITHUB_AUTH_MODE") {
 		t.Errorf("invalid mode should fail validation, got %v", err)
+	}
+}
+
+func TestLoad_AuthCheckSchedule(t *testing.T) {
+	isolateEnv(t)
+
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, ".env"), `LINEAR_API_KEY="lin_xyz"`)
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AuthCheckSchedule != DefaultAuthCheckSchedule {
+		t.Errorf("AuthCheckSchedule default: got %q, want %q", cfg.AuthCheckSchedule, DefaultAuthCheckSchedule)
+	}
+
+	writeFile(t, filepath.Join(dir, ".env"), "LINEAR_API_KEY=\"lin_xyz\"\nAUTH_CHECK_SCHEDULE=\"OFF\"")
+	cfg, err = Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AuthCheckSchedule != "" {
+		t.Errorf("AUTH_CHECK_SCHEDULE=off should disable the check, got %q", cfg.AuthCheckSchedule)
 	}
 }

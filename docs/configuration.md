@@ -85,6 +85,10 @@ Set `TELEGRAM_ENABLED=true` with a bot token and chat ID, and Noctra sends updat
 
 `SLACK_WEBHOOK_URL` and `DISCORD_WEBHOOK_URL` add one-way notifications; a non-empty URL turns each on. `VERBOSE_NOTIFICATIONS=true` also pings on every dispatch.
 
+## Credential health check
+
+Once a day at noon (`AUTH_CHECK_SCHEDULE`, a cron expression in the host's local time, default `0 12 * * *`; `off` disables) Noctra checks that GitHub, Linear and the agent CLI are still logged in, without spending tokens. While a login is broken that check sends one 🔑 message naming the service and the command to fix it; the first check after it is fixed sends a ✅. A healthy check sends nothing. Antigravity has no status command, so its login is only reported when a run fails.
+
 ## Dashboard
 
 Set `DASHBOARD_ADDR` (e.g. `:8080`) and `DASHBOARD_TOKEN`, then open `http://<host>:8080/?token=<DASHBOARD_TOKEN>` for live runs, history, token and cost charts, budget, and the sweep matrix. `DASHBOARD_ADMIN_TOKEN` (passed as `&admin_token=…`) unlocks kill, requeue, retry, pause and sweep controls. For a remote host, set `DASHBOARD_SSH=user@host` and run `make dashboard` to tunnel to it.

@@ -47,12 +47,7 @@ func FailureDetail(output string, runErr error) string {
 	if detail == "" && runErr != nil {
 		detail = runErr.Error()
 	}
-	detail = strings.TrimSpace(secretRe.ReplaceAllString(detail, "[redacted]"))
-	const max = 300
-	if r := []rune(detail); len(r) > max {
-		detail = string(r[:max]) + "…"
-	}
-	return detail
+	return redactLine(detail)
 }
 
 func lastMeaningfulLine(output string) string {
