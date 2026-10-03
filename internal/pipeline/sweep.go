@@ -498,16 +498,23 @@ func (p *Pipeline) processSweepTask(ctx context.Context, job sweep.Job, identifi
 	}
 
 	if runErr != nil {
-		logger.Warn("sweep agent exited with error", "err", runErr)
-		if err := p.sweeper.RecordRun(job.RepoSlug, job.Task.Name); err != nil {
-			logger.Warn("could not record sweep run in state", "err", err)
+		failure := describeAgentFailure(backend, output, runErr)
+		logger.Warn("sweep agent exited with error", "err", runErr, "detail", failure.detail, "auth", failure.auth)
+		if !failure.auth {
+			if err := p.sweeper.RecordRun(job.RepoSlug, job.Task.Name); err != nil {
+				logger.Warn("could not record sweep run in state", "err", err)
+			}
 		}
 		p.recordRun(state.RunHistory{
 			Identifier: identifier, Repo: job.RepoSlug,
 			AgentBackend: backend.Name(), RunType: "sweep",
 			StartedAt: startedAt, FinishedAt: time.Now(), Status: "failed",
 		})
-		p.notifySweepOutcome(ctx, job, "❌", "failed", runErr.Error(), usage)
+		icon := "❌"
+		if failure.auth {
+			icon = "🔑"
+		}
+		p.notifySweepOutcome(ctx, job, icon, "failed", failure.detail, usage)
 		return
 	}
 

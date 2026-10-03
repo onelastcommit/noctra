@@ -134,6 +134,7 @@ The non-obvious facts that previously lived in comments, kept here so removing t
 | `ghauth/session.go` | Noctra's own `gh` calls reuse a cached `write` token until 10 minutes before expiry; the git helper and agent runs always mint fresh (`FreshToken`), so a long run never inherits a token that is about to lapse. An agent's `GH_TOKEN` is fixed at spawn and lives an hour, which is why `Activate` warns when `AGENT_TIMEOUT_MINUTES` exceeds 50. |
 | `ghauth/sign.go` | `CanonicalString` is a wire format shared with `noctra-auth` (`src/signing.ts`); `TestCanonicalString_MatchesTokenServiceFormat` pins a vector checked against the TypeScript implementation. Change both sides together or every signed request is refused. |
 | naming | Branch names, identifiers, commit and PR wording, the model label and the watcher's hidden markers are all read back by other code. Their rules live in the [`naming`](../naming/SKILL.md) skill rather than here. |
+| `agent/auth.go` | `AuthFailureLine` only scans the last 40 non-empty log lines and is only consulted after a non-zero exit, so an agent that merely *edited* auth code mid-run is not misread as logged out. It deliberately does not match a bare `401` (that matches `file.go:401`). |
 | `agent/backend.go` | `RunOptions.Env` is merged over the backend's own env (or `os.Environ()`) by key, so the agent's `GH_TOKEN` and `GIT_CONFIG_*` replace the process-wide app-mode values rather than appearing twice. |
 
 ## Quality gates

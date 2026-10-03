@@ -17,7 +17,7 @@ sweep loop → scheduler.DueIn (cron SWEEP_SCHEDULE or fixed SWEEP_INTERVAL) →
 ## Tasks, cooldowns, PRs
 
 - The catalog lives in `internal/sweep/task_*.go`; each file registers a task at init. Current tasks: `lint-cleanup` (weekly), `dead-code` (biweekly), `deps-update` (weekly), `test-coverage` (biweekly), `doc-drift` (biweekly), `modernize` (biweekly), `bug-scan` (biweekly, high-confidence defects only). `SWEEP_TASKS` scopes them.
-- Each task has a per-repo **cooldown** in the state DB (`sweep_states`, `state.SweepState`).
+- Each task has a per-repo **cooldown** in the state DB (`sweep_states`, `state.SweepState`). A run that fails on an expired login (`describeAgentFailure(...).auth`) does **not** record it: the task never ran, so it should retry next cycle once login is restored.
 - Branches are `noctra/sweep-<task>`, identifiers `SWEEP-<repo-slug>-<task>`; the [`naming`](../naming/SKILL.md) skill has why they differ. Sweep PR bodies carry `NoctraPRBodyMarker`, so auto-iterate claims them, and a `maintenance` label so humans can bulk-close them.
 - Budget pause/exceeded skips sweeps, like ticket work.
 - One cycle can land **two tasks on the same repo** (`scheduler.roundRobin` revisits repos on a second pass), and every worktree helper mutates the **shared clone** under its `.git/config` lock. `internal/repo` serialises them per clone via `lockRepo`; without it the loser fails with `could not lock config file .git/config` and its task is silently dropped. Keep any new clone-mutating `git` call inside that lock.

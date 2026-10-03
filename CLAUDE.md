@@ -2,7 +2,7 @@
 
 > `AGENTS.md` at the repo root is a symlink to this file, so the Codex backend (`AGENT_BACKEND=codex`) reads the same project guidance Claude does. Edit `CLAUDE.md`; `AGENTS.md` follows.
 
-Autonomous Linear-to-PR agent in Go. Polls Linear (or GitHub Issues / Jira) for tickets in a trigger state or with a trigger label, dispatches a coding agent to implement them, creates PRs, and moves tickets to review. Up to three loops share one `WaitGroup`, worker pool (`MAX_CONCURRENT`) and active-set:
+Autonomous Linear-to-PR agent in Go. Polls Linear (or GitHub Issues / Jira) for tickets in a trigger state or with a trigger label, dispatches a coding agent to implement them, creates PRs, and moves tickets to review. Up to three work loops share one `WaitGroup`, worker pool (`MAX_CONCURRENT`) and active-set, plus a credential check that only alerts:
 
 ```
 ticket loop  → source.Fetch → pipeline.process (bounded goroutine)
@@ -10,6 +10,7 @@ ticket loop  → source.Fetch → pipeline.process (bounded goroutine)
   → (optional) review.Gate → commit/push → gh pr create → source.MarkReady
 PR loop      (AUTO_ITERATE_PRS) → watch.Scan → pipeline.iteratePR → push to the same branch
 sweep loop   (SWEEP_ENABLED)    → scheduler.Plan → pipeline.processSweepTask → maintenance PR
+auth loop    (AUTH_CHECK_INTERVAL, on by default) → authcheck.RunAll → authcheck.Tracker → notify on break / daily reminder / recovery
 ```
 
 - `TRIGGER_MODE=state` (default) polls the `TRIGGER_STATE` column. `TRIGGER_MODE=label` polls for `TRIGGER_LABEL` regardless of column and **removes** the label after dispatch so the ticket isn't re-polled; the trigger-state ID is then not resolved, but the in-review state still is.
@@ -28,6 +29,7 @@ Each of these has caused a real incident; a plausible-looking patch breaks them 
 - **Names and hidden markers are read back** by the PR watcher and lessons extractor. Change branch names, identifiers, commit/PR wording, footers or markers only through the [`naming`](.claude/skills/naming/SKILL.md) skill.
 - **Manual sweeps go through `Pipeline.TriggerSweep`** into the existing sweep loop; a second dispatcher would bypass the worker-pool cap ([`sweeps`](.claude/skills/sweeps/SKILL.md)).
 - **After changing `internal/dashboard/web/`, run `yarn build` and commit `static/`**, and keep the bundle a single inlined file ([`dashboard`](.claude/skills/dashboard/SKILL.md)).
+- **Report an agent failure through `pipeline.describeAgentFailure`**, not `runErr.Error()`. The exec error is just `exit status 1`; the CLI's own reason (and an expired login, via `agent.AuthFailureLine` + `agent.LoginHint`) is in the log tail.
 - **Keep new operationally significant config visible in the startup banner** (`pipeline.banner`).
 
 ## Multi-repo routing

@@ -360,7 +360,14 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 		return
 	}
 	if runErr != nil {
-		logger.Error("agent run failed", "err", runErr)
+		failure := describeAgentFailure(backend, output, runErr)
+		logger.Error("agent run failed", "err", runErr, "detail", failure.detail, "auth", failure.auth)
+		icon := "❌"
+		if failure.auth {
+			icon = "🔑"
+		}
+		p.notifier.Send(ctx, fmt.Sprintf("%s *%s* — follow-up on PR #%d failed\n%s",
+			icon, notify.EscapeMarkdown(displayName(identifier)), ch.PR.Number, notify.EscapeMarkdown(failure.detail)))
 		p.recordIteration(ctx, ch, identifier, ch.PR.Number, issueID)
 		p.recordRun(state.RunHistory{
 			Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,

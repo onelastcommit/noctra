@@ -300,6 +300,11 @@ func (p *Pipeline) Run(ctx context.Context) error {
 		go p.runSweepLoop(loopCtx, &wg)
 	}
 
+	if p.cfg.AuthCheckInterval > 0 {
+		wg.Add(1)
+		go p.runAuthCheckLoop(loopCtx, &wg)
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -770,6 +775,11 @@ func (p *Pipeline) banner() {
 		planConfirmMode = fmt.Sprintf("Per-ticket (label %q)", p.cfg.PlanConfirmLabel)
 	}
 	fmt.Printf("   Sweep:          %s\n", sweepMode)
+	authCheckMode := "Disabled"
+	if p.cfg.AuthCheckInterval > 0 {
+		authCheckMode = fmt.Sprintf("Every %s", p.cfg.AuthCheckInterval)
+	}
+	fmt.Printf("   Auth check:     %s\n", authCheckMode)
 	fmt.Printf("   Plan-confirm:   %s\n", planConfirmMode)
 	fmt.Printf("   Max concurrent: %d\n", p.cfg.MaxConcurrent)
 	fmt.Printf("   Poll interval:  %s\n", p.cfg.PollInterval)
