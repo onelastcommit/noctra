@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/onelastcommit/noctra/internal/plugins"
 )
 
 var baseCLIs = []string{"git", "gh"}
@@ -127,6 +129,9 @@ type Config struct {
 	MainBranch string
 
 	AgentBackend  string
+	PluginPacks   []string
+	PluginsExtra  []string
+	PluginsDir    string
 	MaxConcurrent int
 	PollInterval  time.Duration
 	UseAgentTeams bool
@@ -230,6 +235,9 @@ func Load(scriptDir string) (*Config, error) {
 
 		AgentBackend:  strings.ToLower(strings.TrimSpace(getenv(fileEnv, "AGENT_BACKEND", DefaultAgentBackend))),
 		UseAgentTeams: getbool(fileEnv, "USE_AGENT_TEAMS", false),
+		PluginPacks:   lowerList(getlist(fileEnv, "AGENT_PLUGIN_PACKS")),
+		PluginsExtra:  getlist(fileEnv, "AGENT_PLUGINS_EXTRA"),
+		PluginsDir:    getenv(fileEnv, "PLUGINS_DIR", filepath.Join(DefaultConfigDir(), "plugins")),
 
 		TelegramEnabled:  getbool(fileEnv, "TELEGRAM_ENABLED", false),
 		TelegramBotToken: getenv(fileEnv, "TELEGRAM_BOT_TOKEN", ""),
@@ -344,6 +352,10 @@ func (c *Config) Validate() error {
 
 	if _, ok := agentCLIs[c.AgentBackend]; !ok {
 		errs = append(errs, fmt.Sprintf("AGENT_BACKEND must be \"claude\", \"codex\", \"copilot\", or \"antigravity\", got %q", c.AgentBackend))
+	}
+
+	if _, err := plugins.Resolve(c.PluginPacks, c.PluginsExtra); err != nil {
+		errs = append(errs, err.Error())
 	}
 
 	switch c.TriggerMode {
@@ -566,6 +578,13 @@ func getint(fileEnv map[string]string, key string, def int) int {
 		return def
 	}
 	return n
+}
+
+func lowerList(items []string) []string {
+	for i, item := range items {
+		items[i] = strings.ToLower(item)
+	}
+	return items
 }
 
 func getlist(fileEnv map[string]string, key string) []string {

@@ -32,7 +32,7 @@ Noctra:
 You: Wake up → review 3 PRs → merge
 ```
 
-It can also run scheduled **maintenance sweeps** (lint, dead code, dependency bumps, doc drift…), cap daily token spend, pull work from GitHub Issues or Jira, and serve a live dashboard. See [Configuration](docs/configuration.md).
+It can also give the agent curated **plugins** (TDD, debugging, design craft…) on any backend, run scheduled **maintenance sweeps** (lint, dead code, dependency bumps, doc drift…), cap daily token spend, pull work from GitHub Issues or Jira, and serve a live dashboard. See [Configuration](docs/configuration.md).
 
 ## Quickstart
 

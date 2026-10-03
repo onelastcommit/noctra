@@ -6,12 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
 	"github.com/onelastcommit/noctra/internal/ghauth"
+	"github.com/onelastcommit/noctra/internal/plugins"
 )
 
 var ErrTimedOut = errors.New("agent timed out")
@@ -26,6 +28,15 @@ type RunOptions struct {
 	UseAgentTeams bool
 	MaxTokens     int64
 	Env           []string
+	PluginDirs    []string
+}
+
+func stageSkills(opts RunOptions) func() {
+	cleanup, err := plugins.Stage(opts.Workdir, opts.PluginDirs)
+	if err != nil {
+		slog.Warn("could not stage every agent skill; running with what was staged", "workdir", opts.Workdir, "err", err)
+	}
+	return cleanup
 }
 
 func childEnv(env []string, opts RunOptions) []string {

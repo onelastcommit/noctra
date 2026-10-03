@@ -3,12 +3,14 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 )
 
 var noctraEnvKeys = []string{
+	"AGENT_PLUGIN_PACKS", "AGENT_PLUGINS_EXTRA", "PLUGINS_DIR",
 	"GITHUB_AUTH_MODE", "NOCTRA_AUTH_URL", "GITHUB_AUTH_DIR",
 	"TICKET_SOURCE", "TICKET_SOURCES", "GITHUB_ISSUES_REPOS", "GITHUB_TRIGGER_LABEL",
 	"LINEAR_API_KEY", "LINEAR_OAUTH_TOKEN", "LINEAR_TEAM_KEY", "TRIGGER_MODE", "TRIGGER_STATE",
@@ -979,5 +981,50 @@ func TestValidate_RejectsUnknownEnglishVariant(t *testing.T) {
 	}
 	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "ENGLISH_VARIANT") {
 		t.Fatalf("expected ENGLISH_VARIANT error, got %v", err)
+	}
+}
+
+func TestLoad_PluginSettings(t *testing.T) {
+	isolateEnv(t)
+
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, ".env"), `
+LINEAR_API_KEY="lin_xyz"
+AGENT_PLUGIN_PACKS="Engineering, frontend"
+AGENT_PLUGINS_EXTRA="acme/skills@`+strings.Repeat("a", 40)+`"
+PLUGINS_DIR="/srv/plugins"
+`)
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if !slices.Equal(cfg.PluginPacks, []string{"engineering", "frontend"}) {
+		t.Errorf("PluginPacks = %v", cfg.PluginPacks)
+	}
+	if len(cfg.PluginsExtra) != 1 || cfg.PluginsDir != "/srv/plugins" {
+		t.Errorf("PluginsExtra = %v, PluginsDir = %q", cfg.PluginsExtra, cfg.PluginsDir)
+	}
+	if err := cfg.Validate(); err != nil {
+		t.Fatalf("Validate: %v", err)
+	}
+}
+
+func TestValidate_RejectsBadPluginSettings(t *testing.T) {
+	for name, line := range map[string]string{
+		"unknown pack":   `AGENT_PLUGIN_PACKS="mobile"`,
+		"unpinned extra": `AGENT_PLUGINS_EXTRA="acme/skills@main"`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			isolateEnv(t)
+			dir := t.TempDir()
+			writeFile(t, filepath.Join(dir, ".env"), "LINEAR_API_KEY=\"lin_xyz\"\n"+line+"\n")
+			cfg, err := Load(dir)
+			if err != nil {
+				t.Fatalf("Load: %v", err)
+			}
+			if err := cfg.Validate(); err == nil {
+				t.Fatal("Validate accepted bad plugin settings")
+			}
+		})
 	}
 }

@@ -22,3 +22,12 @@ A new backend implements `Backend`, registers its name in `agent.New`, and adds 
 - **Claude:** token-capped runs stream `--output-format stream-json`; see the [`sweeps`](../sweeps/SKILL.md) skill for `runCapped` and cost estimation on abort.
 
 The model a run used is read back per backend for PR footers; the [`naming`](../naming/SKILL.md) skill covers where each backend's model comes from.
+
+## Plugins
+
+`AGENT_PLUGIN_PACKS` loads curated skills into every run (`internal/plugins`). `Pipeline.installPlugins` fetches them once at startup and `p.runAgent` puts their directories in `RunOptions.PluginDirs`, so a backend only decides how to deliver them:
+
+- **Claude:** one `--plugin-dir <dir>` per plugin, before `-p`, in both `claudeArgs` and `claudeStreamArgs`. Skills appear namespaced as `noctra-<plugin>:<skill>`.
+- **Codex, Copilot, Antigravity:** `defer stageSkills(opts)()` at the top of `Run` copies the skills into the worktree's `.agents/skills/` and removes them when the run ends.
+
+A new backend must do one of the two; if it reads neither, its runs silently get no skills. Catalogue rules: pin a full SHA, list skills explicitly, take only self-contained skills (no `../` references, no `${CLAUDE_PLUGIN_ROOT}`), and leave out anything that waits for a human or downloads code at run time (impeccable ships without its `scripts/` launcher for that reason; its skill falls back to reading project files).

@@ -27,6 +27,23 @@ State and label names are case-sensitive. Repos are routed by each Linear projec
 
 To post on Linear as an app rather than as you, set `LINEAR_OAUTH_CLIENT_ID` and `LINEAR_OAUTH_CLIENT_SECRET`; Noctra mints and renews the token itself and falls back to `LINEAR_API_KEY` if it fails.
 
+## Agent plugins
+
+```env
+AGENT_PLUGIN_PACKS=engineering,frontend
+AGENT_PLUGINS_EXTRA=          # owner/repo@<commit SHA>, at your own risk
+```
+
+The wizard asks what you mostly build and enables a pack of curated skills that the agent picks up on every run, whichever backend you use:
+
+| Pack | Skills |
+|------|--------|
+| `engineering` (always on with any pack) | superpowers' TDD, systematic debugging, verification-before-completion and receiving-code-review; agent-skills' code simplification; ponytail |
+| `frontend` | impeccable, taste-skill, GSAP (core, timeline, ScrollTrigger, React, performance) |
+| `backend` | agent-skills' API and interface design; Matt Pocock's codebase design |
+
+Each plugin is pinned to an exact upstream commit and fetched into `~/.noctra/plugins` at startup; a failed fetch never blocks a ticket. Only skills are loaded. Hooks, commands and anything else in a plugin are left out, and so are skills that wait for a human (brainstorming, planning). The startup banner and `noctra doctor` show what is active.
+
 ## Cost and safety caps
 
 | Variable | Default | |

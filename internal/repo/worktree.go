@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+
+	"github.com/onelastcommit/noctra/internal/plugins"
 )
 
 var repoLocks sync.Map
@@ -42,6 +44,7 @@ func CreateWorktree(ctx context.Context, base, identifier, repoPath, mainBranch 
 	if err := runIn(ctx, repoPath, "git", "worktree", "add", "-b", branch, wt, "origin/"+mainBranch); err != nil {
 		return Worktree{}, fmt.Errorf("git worktree add %s: %w", wt, err)
 	}
+	excludeStagedSkills(ctx, repoPath)
 	return Worktree{Path: wt, Branch: branch}, nil
 }
 
@@ -61,6 +64,7 @@ func ResumeWorktree(ctx context.Context, base, identifier, repoPath string) (Wor
 	if err := runIn(ctx, repoPath, "git", "worktree", "add", "-b", branch, wt, "origin/"+branch); err != nil {
 		return Worktree{}, fmt.Errorf("git worktree add %s (resume): %w", wt, err)
 	}
+	excludeStagedSkills(ctx, repoPath)
 	return Worktree{Path: wt, Branch: branch}, nil
 }
 
@@ -76,6 +80,7 @@ func CreateWorktreeWithBranch(ctx context.Context, base, identifier, repoPath, m
 	if err := runIn(ctx, repoPath, "git", "worktree", "add", "-b", branch, wt, "origin/"+mainBranch); err != nil {
 		return Worktree{}, fmt.Errorf("git worktree add %s: %w", wt, err)
 	}
+	excludeStagedSkills(ctx, repoPath)
 	return Worktree{Path: wt, Branch: branch}, nil
 }
 
@@ -127,4 +132,10 @@ func runIn(ctx context.Context, dir, name string, args ...string) error {
 		return fmt.Errorf("%s %s: %w (%s)", name, strings.Join(args, " "), err, strings.TrimSpace(string(out)))
 	}
 	return nil
+}
+
+func excludeStagedSkills(ctx context.Context, repoPath string) {
+	if err := plugins.ExcludeStaged(ctx, repoPath); err != nil {
+		slog.Warn("could not git-exclude staged agent skills", "repo", repoPath, "err", err)
+	}
 }

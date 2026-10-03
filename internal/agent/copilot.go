@@ -19,6 +19,7 @@ func (copilotBackend) CoAuthor() string {
 }
 
 func (b copilotBackend) Run(ctx context.Context, opts RunOptions) (Usage, error) {
+	defer stageSkills(opts)()
 	out, err := runCLI(ctx, b.CLI(), copilotArgs(opts), copilotEnv(ctx), opts)
 	return ParseUsage(out), err
 }

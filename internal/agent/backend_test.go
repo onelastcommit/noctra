@@ -357,3 +357,27 @@ func TestChildEnv_MergesRunEnvOverParent(t *testing.T) {
 		t.Fatalf("backend env must be kept and overridden, got %v", got)
 	}
 }
+
+func TestClaudeArgs_LoadPluginsBeforeThePrompt(t *testing.T) {
+	opts := RunOptions{Prompt: "do the thing", PluginDirs: []string{"/p/superpowers@abc", "/p/impeccable@def"}}
+	for name, args := range map[string][]string{"json": claudeArgs(opts), "stream": claudeStreamArgs(opts)} {
+		var dirs []string
+		for i, a := range args {
+			if a == "--plugin-dir" && i+1 < len(args) {
+				dirs = append(dirs, args[i+1])
+			}
+		}
+		if !slices.Equal(dirs, opts.PluginDirs) {
+			t.Errorf("%s: plugin dirs = %v, want %v (args %v)", name, dirs, opts.PluginDirs, args)
+		}
+		if p := slices.Index(args, "-p"); p != len(args)-2 || args[p+1] != "do the thing" {
+			t.Errorf("%s: prompt must stay the final -p argument: %v", name, args)
+		}
+	}
+}
+
+func TestClaudeArgs_NoPluginFlagsWithoutPlugins(t *testing.T) {
+	if slices.Contains(claudeArgs(RunOptions{Prompt: "x"}), "--plugin-dir") {
+		t.Error("claudeArgs added --plugin-dir with no plugins")
+	}
+}
