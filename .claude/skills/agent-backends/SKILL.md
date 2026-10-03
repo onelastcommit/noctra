@@ -25,7 +25,7 @@ The model a run used is read back per backend for PR footers; the [`naming`](../
 
 ## Plugins
 
-`AGENT_PLUGIN_PACKS` loads curated skills into every run (`internal/plugins`). `Pipeline.installPlugins` fetches them once at startup and `p.runAgent` puts their directories in `RunOptions.PluginDirs`, so a backend only decides how to deliver them:
+`AGENT_PLUGIN_PACKS` loads curated skills into every run (`internal/plugins`). `noctra setup` installs them right after writing `.env` (`setup.setUpPlugins`), `Pipeline.installPlugins` re-checks them at every start (instant when nothing changed), and `p.runAgent` puts their directories in `RunOptions.PluginDirs`, so a backend only decides how to deliver them:
 
 - **Claude:** one `--plugin-dir <dir>` per plugin, before `-p`, in both `claudeArgs` and `claudeStreamArgs`. Skills appear namespaced as `noctra-<plugin>:<skill>`.
 - **Codex, Copilot, Antigravity:** `defer stageSkills(opts)()` at the top of `Run` copies the skills into the worktree's `.agents/skills/` and removes them when the run ends.

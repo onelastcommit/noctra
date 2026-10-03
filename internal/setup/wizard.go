@@ -407,6 +407,7 @@ func Run(scriptDir string) error {
 	}
 	fmt.Println()
 	fmt.Printf("✅ Wrote %s\n", envFile)
+	setUpPlugins(scriptDir)
 	fmt.Println("ℹ️  Repos are routed via each Linear project's `Repo: owner/name`")
 	fmt.Println("   directive. Add it to your project descriptions.")
 	fmt.Println()

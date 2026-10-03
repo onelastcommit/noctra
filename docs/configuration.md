@@ -42,7 +42,7 @@ The wizard asks what you mostly build and enables a pack of curated skills that 
 | `frontend` | impeccable, taste-skill, GSAP (core, timeline, ScrollTrigger, React, performance) |
 | `backend` | agent-skills' API and interface design; Matt Pocock's codebase design |
 
-Each plugin is pinned to an exact upstream commit and fetched into `~/.noctra/plugins` at startup; a failed fetch never blocks a ticket. Only skills are loaded. Hooks, commands and anything else in a plugin are left out, and so are skills that wait for a human (brainstorming, planning). The startup banner and `noctra doctor` show what is active.
+Each plugin is pinned to an exact upstream commit. `noctra setup` downloads your packs into `~/.noctra/plugins` as soon as you choose them, and every start re-checks them, so editing `.env` by hand works too. A failed download never blocks a ticket. Only skills are loaded. Hooks, commands and anything else in a plugin are left out, and so are skills that wait for a human (brainstorming, planning). The startup banner and `noctra doctor` show what is active.
 
 ## Cost and safety caps
 
