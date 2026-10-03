@@ -58,12 +58,13 @@ func claudeStreamArgs(opts RunOptions) []string {
 }
 
 type claudeStreamEvent struct {
-	Type         string      `json:"type"`
-	Subtype      string      `json:"subtype"`
-	Result       string      `json:"result"`
-	TotalCostUSD float64     `json:"total_cost_usd"`
-	Model        string      `json:"model"`
-	Usage        claudeUsage `json:"usage"`
+	Type         string                `json:"type"`
+	Subtype      string                `json:"subtype"`
+	Result       string                `json:"result"`
+	TotalCostUSD float64               `json:"total_cost_usd"`
+	Model        string                `json:"model"`
+	ModelUsage   map[string]modelShare `json:"modelUsage"`
+	Usage        claudeUsage           `json:"usage"`
 	Message      struct {
 		Model string      `json:"model"`
 		Usage claudeUsage `json:"usage"`
@@ -160,6 +161,7 @@ func (b claudeBackend) runCapped(ctx context.Context, opts RunOptions, env []str
 		cumUsage  claudeUsage
 		cumTokens int64
 		model     string
+		seen      = map[string]modelShare{}
 		aborted   bool
 		tail      streamTail
 	)
@@ -175,6 +177,9 @@ func (b claudeBackend) runCapped(ctx context.Context, opts RunOptions, env []str
 				case "assistant":
 					if ev.Message.Model != "" {
 						model = ev.Message.Model
+						share := seen[model]
+						share.OutputTokens += ev.Message.Usage.OutputTokens
+						seen[model] = share
 					}
 					cumUsage.add(ev.Message.Usage)
 					cumTokens = cumUsage.total()
@@ -189,6 +194,7 @@ func (b claudeBackend) runCapped(ctx context.Context, opts RunOptions, env []str
 						OutputTokens: ev.Usage.OutputTokens,
 						TotalTokens:  in + ev.Usage.OutputTokens,
 						CostUSD:      ev.TotalCostUSD,
+						Model:        primaryModel(ev.ModelUsage),
 					}
 					result = ev.Result
 				}
@@ -216,6 +222,9 @@ func (b claudeBackend) runCapped(ctx context.Context, opts RunOptions, env []str
 		final = cumUsage.toUsage(model)
 	} else if final.CostUSD == 0 && cumTokens > 0 {
 		final.CostUSD = cumUsage.toUsage(model).CostUSD
+	}
+	if final.Model == "" {
+		final.Model = primaryModel(seen)
 	}
 
 	if aborted {

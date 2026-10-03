@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/onelastcommit/noctra/internal/github"
+	"github.com/onelastcommit/noctra/internal/repo"
 	"github.com/onelastcommit/noctra/internal/sweep"
 	"github.com/onelastcommit/noctra/internal/watch"
 )
@@ -130,12 +131,14 @@ func TestIdentifierFromBranch(t *testing.T) {
 		{"noctra/eng-42", "ENG-42"},
 		{"noctra/eng-181", "ENG-181"},
 		{"noctra/sweep-repo-a-lint-cleanup", "SWEEP-REPO-A-LINT-CLEANUP"},
+		{"noctra/sweep-onelastcommit-onenote-mcp-deps-update", "SWEEP-ONELASTCOMMIT-ONENOTE-MCP-DEPS-UPDATE"},
+		{"noctra/sweep-deps-update", "SWEEP-ONELASTCOMMIT-ONENOTE-MCP-DEPS-UPDATE"},
 		{"main", ""},
 		{"feature/something", ""},
 		{"noctra/", ""},
 	}
 	for _, tt := range tests {
-		got := identifierFromBranch(tt.branch)
+		got := identifierFromBranch(tt.branch, "https://github.com/onelastcommit/onenote-mcp/pull/45")
 		if got != tt.want {
 			t.Errorf("identifierFromBranch(%q) = %q, want %q", tt.branch, got, tt.want)
 		}
@@ -143,13 +146,13 @@ func TestIdentifierFromBranch(t *testing.T) {
 }
 
 func TestIdentifierFromBranch_SweepRoundTrip(t *testing.T) {
-	repoSlug := "Owner/Repo-A"
-	taskSuffix := "lint-cleanup"
-
-	got := identifierFromBranch(sweep.SweepBranchName(repoSlug, taskSuffix))
-	want := sweep.SweepIdentifier(repoSlug, taskSuffix)
-	if got != want {
-		t.Errorf("sweep branch identifier = %q, want %q", got, want)
+	prURL := "https://github.com/Owner/Repo-A/pull/7"
+	want := sweep.SweepIdentifier(repo.Slug("Owner/Repo-A"), "lint-cleanup")
+	if got := identifierFromBranch(sweep.SweepBranchName("lint-cleanup"), prURL); got != want {
+		t.Errorf("short sweep branch identifier = %q, want %q", got, want)
+	}
+	if got := identifierFromBranch(sweep.LegacySweepBranchName(repo.Slug("Owner/Repo-A"), "lint-cleanup"), prURL); got != want {
+		t.Errorf("legacy sweep branch identifier = %q, want %q", got, want)
 	}
 }
 

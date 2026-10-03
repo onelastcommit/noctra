@@ -44,8 +44,27 @@ func FilterTasks(enabled []string) []Task {
 	return out
 }
 
-func SweepBranchName(repoSlug, taskSuffix string) string {
+const sweepBranchPrefix = "noctra/sweep-"
+
+func SweepBranchName(taskSuffix string) string {
+	return sweepBranchPrefix + strings.ToLower(taskSuffix)
+}
+
+func LegacySweepBranchName(repoSlug, taskSuffix string) string {
 	return "noctra/" + strings.ToLower(SweepIdentifier(repoSlug, taskSuffix))
+}
+
+func TaskSuffixFromBranch(branch string) (string, bool) {
+	rest, ok := strings.CutPrefix(strings.ToLower(branch), sweepBranchPrefix)
+	if !ok {
+		return "", false
+	}
+	for _, t := range catalog {
+		if t.BranchSuffix == rest {
+			return rest, true
+		}
+	}
+	return "", false
 }
 
 func SweepIdentifier(repoSlug, taskSuffix string) string {

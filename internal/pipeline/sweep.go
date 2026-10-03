@@ -252,7 +252,7 @@ func (p *Pipeline) salvageAbortedWork(ctx context.Context, a sweepAbort) string 
 		if staged {
 			msg := appendCoAuthorTrailer(
 				fmt.Sprintf("%s: %s (partial)\n\nAutonomous maintenance by Noctra using %s.\n%s",
-					a.job.Task.CommitPrefix, a.job.Task.Description, a.backend.Label(), a.detail),
+					a.job.Task.CommitPrefix, a.job.Task.Description, agent.RunnerLabel(a.backend.Label(), a.usage.Model), a.detail),
 				a.backend.CoAuthor())
 			if err := runIn(ctx, a.worktree.Path, "git", "commit", "-m", msg); err != nil {
 				a.logger.Warn("could not commit salvaged work", "err", err)
@@ -269,7 +269,7 @@ func (p *Pipeline) salvageAbortedWork(ctx context.Context, a sweepAbort) string 
 	stat := gitDiffStat(ctx, a.worktree.Path, "origin/"+a.job.MainBranch)
 	prURL, err := ghCreateDraftPR(ctx, a.job.RepoPath,
 		salvagedPRTitle(a.job.Task.CommitPrefix, a.job.Task.Description),
-		salvagedPRBody(a.job, a.detail, stat, a.backend.Label()),
+		salvagedPRBody(a.job, a.detail, stat, agent.RunnerLabel(a.backend.Label(), a.usage.Model)),
 		a.job.MainBranch, a.worktree.Branch)
 	if err != nil {
 		a.logger.Warn("could not open draft PR for salvaged work", "err", err)
@@ -313,6 +313,13 @@ func (p *Pipeline) repoLessons(repoSlug string) string {
 		return ""
 	}
 	return lessons
+}
+
+func sweepRepoName(ctx context.Context, job sweep.Job) string {
+	if ownerRepo, err := github.OwnerRepoOfDir(ctx, job.RepoPath); err == nil {
+		return ownerRepo
+	}
+	return job.RepoSlug
 }
 
 func salvagedPRTitle(commitPrefix, description string) string {
@@ -387,15 +394,17 @@ func (p *Pipeline) processSweepTask(ctx context.Context, job sweep.Job, identifi
 			notify.EscapeMarkdown(job.Task.Description)))
 	}
 
-	branch := sweep.SweepBranchName(job.RepoSlug, job.Task.BranchSuffix)
-	openPR, err := ghOpenPRForBranch(ctx, job.RepoPath, branch)
-	if err != nil {
-		logger.Warn("could not check for an open sweep PR, skipping", "branch", branch, "err", err)
-		return
-	}
-	if openPR != "" {
-		logger.Info("previous sweep PR still open, skipping", "url", openPR)
-		return
+	branch := sweep.SweepBranchName(job.Task.BranchSuffix)
+	for _, candidate := range []string{branch, sweep.LegacySweepBranchName(job.RepoSlug, job.Task.BranchSuffix)} {
+		openPR, err := ghOpenPRForBranch(ctx, job.RepoPath, candidate)
+		if err != nil {
+			logger.Warn("could not check for an open sweep PR, skipping", "branch", candidate, "err", err)
+			return
+		}
+		if openPR != "" {
+			logger.Info("previous sweep PR still open, skipping", "url", openPR)
+			return
+		}
 	}
 
 	wt, err := repo.CreateWorktreeWithBranch(ctx, p.cfg.WorktreeBase, identifier, job.RepoPath, job.MainBranch, branch)
@@ -549,7 +558,7 @@ func (p *Pipeline) processSweepTask(ctx context.Context, job sweep.Job, identifi
 
 	commitMsg := appendCoAuthorTrailer(
 		fmt.Sprintf("%s: %s\n\nAutonomous maintenance by Noctra using %s",
-			job.Task.CommitPrefix, job.Task.Description, backend.Label()),
+			job.Task.CommitPrefix, job.Task.Description, agent.RunnerLabel(backend.Label(), usage.Model)),
 		backend.CoAuthor())
 
 	staged, err := hasStagedChanges(ctx, wt.Path)
@@ -683,7 +692,7 @@ func (p *Pipeline) processSweepTask(ctx context.Context, job sweep.Job, identifi
 		if staged {
 			fixCommitMsg := appendCoAuthorTrailer(
 				fmt.Sprintf("%s: Address review feedback\n\nAutonomous maintenance by Noctra using %s",
-					job.Task.CommitPrefix, backend.Label()),
+					job.Task.CommitPrefix, agent.RunnerLabel(backend.Label(), usage.Model)),
 				backend.CoAuthor())
 			if err := runIn(ctx, wt.Path, "git", "commit", "-m", fixCommitMsg); err != nil {
 				logger.Error("git commit for review fixes failed", "err", err)
@@ -717,7 +726,7 @@ func (p *Pipeline) processSweepTask(ctx context.Context, job sweep.Job, identifi
 
 	prBody := fmt.Sprintf(
 		"## 🧹 Maintenance: %s\n\n**Task:** %s\n**Repo:** %s\n\n## What was done\n\n%s\n\n---\n\n*Autonomous maintenance by [Noctra](https://github.com/onelastcommit/noctra) 🌙 using %s*\n%s",
-		job.Task.Name, job.Task.Description, job.RepoSlug, summary, backend.Label(), github.NoctraPRBodyMarker)
+		job.Task.Name, job.Task.Description, sweepRepoName(ctx, job), summary, agent.RunnerLabel(backend.Label(), usage.Model), github.NoctraPRBodyMarker)
 
 	prTitle := fmt.Sprintf("%s: %s", job.Task.CommitPrefix, job.Task.Description)
 
