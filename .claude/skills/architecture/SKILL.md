@@ -7,28 +7,38 @@ description: Use when modifying Noctra's own source code to understand non-obvio
 
 Use this playbook before changing Noctra's core code. The invariants below are easy to violate in a plausible-looking patch; each has caused a real bug or regression.
 
-## Package map (navigation aid)
+## Package map
 
 | Package | Purpose |
 |---------|---------|
-| `cmd/noctra` | Entry point, subcommand dispatch, startup banner |
-| `internal/config` | `.env` parser, validated `Config`, `DefaultConfigDir` |
-| `internal/linear` | Linear GraphQL client (trigger queries, state/label mutations, comments, Telegram read queries) |
-| `internal/repo` | Repo resolution (`ResolveDirect` / `Resolve`), clone-on-demand, worktree create/resume/cleanup, `BranchName` |
-| `internal/agent` | Pluggable coding-agent backends, shared prompt builders, log_offset helpers, `BlockedLine`, `ExtractSummary` |
-| `internal/review` | Optional Gemini second-model review gate |
-| `internal/notify` | Optional Telegram notifier (fire-and-forget) |
-| `internal/telegram` | Inbound Telegram listener (long-polling, command dispatch) |
-| `internal/github` | Thin `gh` CLI wrapper (`ListNoctraPRs`, `GetPR`, `CheckLogs`) |
-| `internal/ghauth` / `internal/ghauthcmd` | GitHub App mode: instance key, signed token-service client, device flow, git credential helper, `github login/logout/status` |
-| `internal/state` | File-backed PR cursor store (`~/.noctra-state.json`) |
-| `internal/watch` | Side-effect-free PR classifier (diffs feedback + CI against cursor) |
-| `internal/pipeline` | Poll loop, worker pool, per-ticket lifecycle (`process.go`), PR-watch + iterate (`iterate.go`), Telegram commands (`commands.go`) |
-| `internal/setup` | Interactive setup wizard |
-| `internal/cleanup` | Cleanup subcommand (branches, worktrees, old logs) |
-| `internal/service` | `install-service` subcommand (systemd unit rendering) |
-| `internal/doctor` | Preflight checks (CLIs, auth, repo routing) |
-| `internal/selfupdate` | In-place binary upgrade via GoReleaser archives |
+| `cmd/noctra` | Entry point + subcommand dispatch (`run` / `setup` / `config` / `repos` / `sweep` / `github` / `git-credential` / `cleanup` / `doctor [--json]` / `update` / `install-service [--start/--force]` / `logs` / `tail` / `start` / `stop` / `restart` / `status` / `completion` / `version`). `start`…`status` are thin `systemctl --user <verb> noctra.service` wrappers; `completion bash\|zsh` is the pure `completionScript`; startup banner; `--help` |
+| `internal/config` | `.env` parser, validated `Config`, `DefaultConfigDir` (`~/.noctra/`) |
+| `internal/configcmd` | `noctra config path\|edit\|get\|set` — atomic, comment-preserving `.env` edits |
+| `internal/source` | Ticket sources behind one interface: Linear, GitHub Issues (`TICKET_SOURCES`), Jira |
+| `internal/linear` | Linear GraphQL client: `ResolveStateIDs`, `FetchTriggerIssues`, `FetchLabeledIssues` (both fetch issue `comments` → `Issue.ClarificationComments`, which filters Noctra's own notices by the `"**Noctra"` body prefix, and the project `description`/`content` → `Project.RepoDirective`), `ResolveLabelID`, `RemoveLabel`, `SetState`, `Comment`; Telegram read queries (`ProjectIssueCounts`, `ListProjectIssues`, `SearchIssues`, `GetIssueByIdentifier`); `ListProjects` (+ `id`/`slugId`/`url` so `MatchProjects` resolves a pasted link) and `UpdateProjectContent`/`UpsertRepoDirective`. Auth: personal API key (`New`, sent verbatim), static app-actor OAuth token (`NewOAuth`, `Bearer`, `LINEAR_OAUTH_TOKEN`), or — preferred — the self-renewing actor=app `TokenManager` (`oauth.go`: `client_credentials&actor=app` from `LINEAR_OAUTH_CLIENT_ID`/`SECRET`, or `refresh_token` when `LINEAR_OAUTH_REFRESH_TOKEN` is set, rotations persisted via `state.Store`). OAuth paths set `Client.FallbackAPIKey`, so an expired app token **degrades to the personal key** (with `OnDegrade`) instead of crash-looping; a partial actor=app config warns and falls back |
+| `internal/linearclient` | Builds the authenticated `linear.Client` from config; one place for credential precedence |
+| `internal/repo` | `ResolveDirect` (`Repo:` directive or a PR's own repo, `origin/HEAD` default-branch detection) + `Resolve` (`REPO_PATH` fallback); `AllRepoPaths`/`AllRepoRemotes` (scan `ReposBase`); clone-on-demand (`mkdir(2)` lock); `CreateWorktree` / `ResumeWorktree` / `CreateOrResumeWorktree` (picks on `RemoteBranchExists`); `lockRepo`; `BranchName` |
+| `internal/repoadd` | Shared "add a repository" core: clone via `ResolveDirect` **first**, then write the project's `Repo:` directive, so a directive never points at a repo the host can't reach. A `Result` with a `Path` plus an error means only the directive failed |
+| `internal/reposcmd` | `noctra repos add` / `list` — CLI channel over `repoadd` |
+| `internal/agent` | Backends behind `Backend` ([`agent-backends`](../agent-backends/SKILL.md)); shared prompt builders, `BuildFixPrompt`, `BlockedLine`, log_offset, `ExtractSummary`, `ExtractFindingReplies`, pricing |
+| `internal/review` | Optional Gemini review gate. API mode requests JSON (`verdict` + `summary` + line-anchored `findings`); `process.go` posts findings as inline PR comments (`github.PostInlineComments`, each with `NoctraReplyMarker`) and leaves a concise verdict in the PR body. CLI mode / unparseable JSON fall back to the prose verdict |
+| `internal/budget` | Daily token/USD caps (`MAX_DAILY_TOKENS` / `MAX_DAILY_USD`), reset at UTC midnight |
+| `internal/notify` | Fire-and-forget `Notifier` (`Send`/`SendSync`): Telegram, Slack, Discord; `Multi` fans out (`buildNotifier` in `pipeline`). Slack/Discord are on when their webhook URL is non-empty; Telegram keeps `TELEGRAM_ENABLED`. Messages use single-`*` mrkdwn; Discord rewrites to `**x**` and sends `allowed_mentions:{parse:[]}` |
+| `internal/telegram` | Inbound listener: long-poll `getUpdates`, sender auth, dispatcher. `Register` for one-shot commands; `RegisterConversation` for guided flows — while live, plain messages route to it; it ends on completion, `/cancel`, a 5-minute `sessionTTL`, or any other command (which interrupts it and still runs) |
+| `internal/github` | `gh` wrapper: `ListNoctraPRs`, `GetPR` (comments + reviews + inline comments via REST + `statusCheckRollup`), `CheckLogs`, thread replies/resolution; `Command`/`CommandInDir` ([`github-identity`](../github-identity/SKILL.md)) |
+| `internal/ghauth` / `internal/ghauthcmd` | GitHub App client side and `noctra github login\|logout\|status`, `git-credential`, `Activate` |
+| `internal/state` | SQLite store (`STATE_DB`, default `~/.noctra/state.db`; `modernc.org/sqlite`, single conn): PR cursors + CI SHA + iteration count (`pr_states`), sweep cooldowns (`sweep_states`), plan/run-history/usage, the rotating Linear OAuth token. `OpenMigrating` imports legacy JSON (`STATE_FILE`) only when the DB is new; the JSON is never deleted |
+| `internal/watch` | Side-effect-free PR classifier ([`auto-iterate`](../auto-iterate/SKILL.md)) |
+| `internal/lessons` | Learns repo conventions from human commits on merged Noctra PRs (`ProcessMergedPRs`) |
+| `internal/pipeline` | Poll loop + worker pool + per-ticket lifecycle (`process.go`); PR-watch (`iterate.go`); sweeps (`sweep.go`); Telegram handlers `/status` `/tickets` `/ticket` `/search-tickets` (`/find`) `/start` `/move` `/pause` `/resume` `/kill` `/requeue` `/sweep` (`commands.go`) and guided `/addrepo` (`addrepo.go`) |
+| `internal/sweep` | Sweep task catalog + scheduler ([`sweeps`](../sweeps/SKILL.md)) |
+| `internal/sweepcmd` | `noctra sweep [--task] [--repo] [--force]` — thin client over `POST /api/sweep` |
+| `internal/dashboard` | Operations dashboard server + SSE hub; UI in `web/` ([`dashboard`](../dashboard/SKILL.md)) |
+| `internal/setup` | Interactive wizard (`noctra setup`); writes `.env` only, merging into an existing one |
+| `internal/cleanup` | Branches, worktrees, old logs |
+| `internal/service` | `install-service`: renders the `systemd --user` unit (pure `unitFile(exePath, pathEnv)`), `daemon-reload`; `--start` enables/starts + `loginctl enable-linger`; refuses without `--force` if the unit exists. Pairs with `scripts/install.sh` |
+| `internal/doctor` | Preflight checks; `gather` is side-effect-free, `Run` renders the report, `RunJSON` emits `{name, ok, detail, hint}` + non-zero on failure |
+| `internal/selfupdate` | `Latest`/`IsNewer`/`assetName` (pure) + `Update` (download the GoReleaser archive via `gh`, verify SHA-256 against `checksums.txt`, atomic swap). `noctra run` fires a best-effort `checkForUpdate` at startup |
 
 ## Invariant 1: the `log_offset` pattern
 
@@ -49,13 +59,7 @@ The auto-iterate watcher identifies its own PRs by the `noctra/<id>` branch pref
 
 ## Invariant 3: backend-agnostic `internal/agent` split
 
-Almost everything in `internal/agent` is shared across all backends (Claude, Codex, Copilot): prompt builders (`BuildPrompt`, `BuildFixPrompt`), `BlockedLine`, log_offset helpers, and `ExtractSummary`.
-
-**Only two things differ per backend:**
-1. **Invocation args** — `claudeArgs` / `codexArgs` / `copilotArgs`. All go through the shared `runCLI`.
-2. **Rate-limit parsing** — `HasRateLimit` with per-backend regexes (`claudeRateLimitRe` / `codexRateLimitRe` / `copilotRateLimitRe`).
-
-**Rule:** when adding shared agent logic, put it in the common code (`exec.go`, `prompt.go`). Only add to a backend-specific file (`claude.go`, `codex.go`, `copilot.go`) if the behaviour genuinely differs per backend. If adding a new backend, implement the `Backend` interface and add the name to `agent.New`.
+Shared agent logic goes in the common code (`exec.go`, `prompt.go`); a backend file holds only its invocation args and rate-limit regex. Details and per-backend quirks: [`agent-backends`](../agent-backends/SKILL.md).
 
 ## Invariant 4: cursor semantics
 

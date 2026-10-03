@@ -22,18 +22,25 @@ For local development, `go run ./cmd/noctra ...` uses the repo's own `.env` (the
 
 ## Project layout
 
-The **Package map** in [CLAUDE.md](CLAUDE.md) documents every `internal/<pkg>`. The short version:
+The package map in the [`architecture` skill](.claude/skills/architecture/SKILL.md) documents every `internal/<pkg>`, and [CLAUDE.md](CLAUDE.md) lists the guardrails and the skill for each subsystem. The short version:
 
 - `internal/pipeline` — the poll loop and the per-ticket lifecycle (dispatch → worktree → agent → review → PR → Linear).
-- `internal/agent` — pluggable coding-agent backends behind the `Backend` interface (Claude / Codex).
+- `internal/agent` — pluggable coding-agent backends behind the `Backend` interface (Claude / Codex / Copilot / Antigravity).
 - `internal/config`, `internal/linear`, `internal/github`, `internal/repo`, `internal/watch`, `internal/telegram` — config, the external integrations, and the PR-watch classifier.
+
+The Go source carries no comments (`make check-comments` enforces it in CI); reasoning belongs in CLAUDE.md or the skills.
+
+### Dashboard UI
+
+Only changes under `internal/dashboard/web/` need Node. Run `yarn install && yarn build` there and commit the regenerated `internal/dashboard/static/`; CI fails if it is stale. `yarn dev` serves the UI against a mock API. Details: [`dashboard` skill](.claude/skills/dashboard/SKILL.md).
 
 ## Pull requests
 
 - Keep them **small and focused** — one logical change per PR.
 - Add or update tests for behaviour changes; keep `go vet` and lint clean.
 - Write a clear description: **what** changed and **why**. Reference the issue if there is one.
-- Branch off the latest `main`.
+- Branch off the latest `main`, and never use the `noctra/` branch prefix — it is reserved for branches Noctra creates.
+- Add a `release:patch`, `release:minor` or `release:major` label to cut a release on merge; unlabelled PRs don't release.
 
 ## Adding a backend
 

@@ -162,7 +162,7 @@ TRUSTED_REVIEWERS=
 
 Noctra only watches PRs it authored, identified by the `noctra/<id>` branch prefix. It ignores bot feedback unless the bot login is in `TRUSTED_REVIEWERS`. CI failures are keyed by head commit SHA and are acted on once per failing commit.
 
-The restart-safe cursor is stored in `~/.noctra-state.json` unless `STATE_FILE` overrides it.
+The restart-safe cursor is stored in the SQLite DB at `~/.noctra/state.db` unless `STATE_DB` overrides it. Deeper behaviour is in the [`auto-iterate`](../auto-iterate/SKILL.md) skill.
 
 ## Cleanup After A Crash Or Bad Run
 
