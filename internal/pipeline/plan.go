@@ -220,7 +220,7 @@ func (p *Pipeline) processPlanOnly(ctx context.Context, issue source.Ticket) {
 
 	offset := agent.OffsetBefore(logFile)
 
-	usage, runErr := backend.Run(ctx, agent.RunOptions{
+	usage, runErr := p.runAgent(ctx, backend, agent.RunOptions{
 		Workdir:   wt.Path,
 		Env:       p.agentEnv(ctx, wt.Path),
 		Prompt:    prompt,

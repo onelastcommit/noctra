@@ -46,6 +46,10 @@ To post on Linear as an app rather than as you, set `LINEAR_OAUTH_CLIENT_ID` and
 
 A second model has different blind spots. With the review gate on, Noctra sends the diff and ticket to Gemini, posts its findings as inline PR comments, and gives the agent `MAX_REVIEW_RETRIES` fix passes. If it still fails, the PR opens anyway with the verdict in the body. Expect roughly $0.01–$0.05 per ticket with `gemini-2.5-pro`.
 
+### Language
+
+`ENGLISH_VARIANT` sets the spelling for everything the agent and the Gemini reviewer write: code comments, docs, commit messages, PR text and review replies. Use `british` (the default, e.g. "colour", "behaviour") or `american` (e.g. "color", "behavior"). Spellings fixed by a language or API, such as CSS properties and library identifiers, are left alone, and new names follow the codebase's existing convention.
+
 ## Auto-iterate on PR feedback
 
 ```env

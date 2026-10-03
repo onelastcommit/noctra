@@ -303,7 +303,7 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 
 	headBefore := gitHead(ctx, wt.Path)
 
-	usage, runErr := backend.Run(ctx, agent.RunOptions{
+	usage, runErr := p.runAgent(ctx, backend, agent.RunOptions{
 		Workdir:       wt.Path,
 		Env:           p.agentEnv(ctx, wt.Path),
 		Prompt:        prompt,

@@ -78,6 +78,8 @@ const (
 
 	DefaultReleaseBump = "patch"
 
+	DefaultEnglishVariant = "british"
+
 	DefaultRateLimitStrategy = "pause"
 	DefaultRateLimitCooldown = 30 * time.Minute
 
@@ -157,6 +159,8 @@ type Config struct {
 
 	AutoReleaseLabel   bool
 	DefaultReleaseBump string
+
+	EnglishVariant string
 
 	MaxDailyTokens    int64
 	MaxDailyUSD       float64
@@ -282,6 +286,7 @@ func Load(scriptDir string) (*Config, error) {
 
 	cfg.AutoReleaseLabel = getbool(fileEnv, "AUTO_RELEASE_LABEL", false)
 	cfg.DefaultReleaseBump = strings.ToLower(strings.TrimSpace(getenv(fileEnv, "DEFAULT_RELEASE_BUMP", DefaultReleaseBump)))
+	cfg.EnglishVariant = strings.ToLower(strings.TrimSpace(getenv(fileEnv, "ENGLISH_VARIANT", DefaultEnglishVariant)))
 
 	cfg.MaxDailyTokens = int64(getint(fileEnv, "MAX_DAILY_TOKENS", 0))
 	cfg.MaxDailyUSD = getfloat(fileEnv, "MAX_DAILY_USD", 0)
@@ -396,6 +401,12 @@ func (c *Config) Validate() error {
 		default:
 			errs = append(errs, fmt.Sprintf("DEFAULT_RELEASE_BUMP must be \"patch\", \"minor\", or \"major\", got %q", c.DefaultReleaseBump))
 		}
+	}
+
+	switch c.EnglishVariant {
+	case "british", "american":
+	default:
+		errs = append(errs, fmt.Sprintf("ENGLISH_VARIANT must be \"british\" or \"american\", got %q", c.EnglishVariant))
 	}
 
 	switch c.RateLimitStrategy {

@@ -30,6 +30,7 @@ Each of these has caused a real incident; a plausible-looking patch breaks them 
 - **Manual sweeps go through `Pipeline.TriggerSweep`** into the existing sweep loop; a second dispatcher would bypass the worker-pool cap ([`sweeps`](.claude/skills/sweeps/SKILL.md)).
 - **After changing `internal/dashboard/web/`, run `yarn build` and commit `static/`**, and keep the bundle a single inlined file ([`dashboard`](.claude/skills/dashboard/SKILL.md)).
 - **Report an agent failure through `pipeline.describeAgentFailure`**, not `runErr.Error()`. The exec error is just `exit status 1`; the CLI's own reason (and an expired login, via `agent.AuthFailureLine` + `agent.LoginHint`) is in the log tail.
+- **Start agent runs with `p.runAgent`, never `backend.Run` directly.** It appends the `ENGLISH_VARIANT` spelling rule (`agent.LanguageSection`) to every prompt; a direct call writes in whatever spelling the model defaults to.
 - **Keep new operationally significant config visible in the startup banner** (`pipeline.banner`).
 
 ## Multi-repo routing

@@ -22,7 +22,7 @@ var noctraEnvKeys = []string{
 	"AUTO_ITERATE_PRS", "MAX_PR_ITERATIONS", "PR_POLL_INTERVAL",
 	"TRUSTED_REVIEWERS", "STATE_DB", "STATE_FILE",
 	"MAX_DAILY_TOKENS", "MAX_DAILY_USD", "AGENT_MAX_TOKENS", "RATE_LIMIT_STRATEGY", "RATE_LIMIT_COOLDOWN",
-	"AUTH_CHECK_SCHEDULE",
+	"AUTH_CHECK_SCHEDULE", "ENGLISH_VARIANT",
 	"SWEEP_ENABLED", "SWEEP_SCHEDULE", "SWEEP_INTERVAL", "SWEEP_MAX_TASKS", "SWEEP_TIMEOUT_MINUTES", "SWEEP_TASKS",
 }
 
@@ -942,5 +942,42 @@ func TestLoad_AuthCheckSchedule(t *testing.T) {
 	}
 	if cfg.AuthCheckSchedule != "" {
 		t.Errorf("AUTH_CHECK_SCHEDULE=off should disable the check, got %q", cfg.AuthCheckSchedule)
+	}
+}
+
+func TestLoad_EnglishVariant(t *testing.T) {
+	isolateEnv(t)
+
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, ".env"), `LINEAR_API_KEY="lin_xyz"`)
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.EnglishVariant != "british" {
+		t.Errorf("EnglishVariant default: got %q, want british", cfg.EnglishVariant)
+	}
+
+	writeFile(t, filepath.Join(dir, ".env"), "LINEAR_API_KEY=\"lin_xyz\"\nENGLISH_VARIANT=\" American \"")
+	cfg, err = Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.EnglishVariant != "american" {
+		t.Errorf("EnglishVariant: got %q, want american", cfg.EnglishVariant)
+	}
+}
+
+func TestValidate_RejectsUnknownEnglishVariant(t *testing.T) {
+	isolateEnv(t)
+
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, ".env"), "LINEAR_API_KEY=\"lin_xyz\"\nENGLISH_VARIANT=\"australian\"")
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if err := cfg.Validate(); err == nil || !strings.Contains(err.Error(), "ENGLISH_VARIANT") {
+		t.Fatalf("expected ENGLISH_VARIANT error, got %v", err)
 	}
 }
