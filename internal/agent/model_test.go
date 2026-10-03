@@ -18,7 +18,8 @@ func TestModelDisplayName(t *testing.T) {
 		"claude-opus-4-20250514":     "Opus 4",
 		"Claude-Opus-5-5":            "Opus 5.5",
 		"claude-3-5-sonnet-20241022": "claude-3-5-sonnet-20241022",
-		"gpt-5.1-codex":              "gpt-5.1-codex",
+		"gpt-5.5":                    "GPT-5.5",
+		"gpt-5.1-codex":              "GPT-5.1-codex",
 		"":                           "",
 		"  ":                         "",
 	}
@@ -106,5 +107,18 @@ func TestRunCapped_ModelSurvivesAbort(t *testing.T) {
 	}
 	if usage.Model != "claude-opus-5-5" {
 		t.Fatalf("aborted run lost its model: %q", usage.Model)
+	}
+}
+
+func TestCodexModel_ReadsTheSessionHeader(t *testing.T) {
+	out := "Reading additional input from stdin...\nOpenAI Codex v0.137.0\n--------\nworkdir: /w\nmodel: gpt-5.5\nprovider: openai\n--------\nuser\nthe ticket mentions model: something-else in prose\n"
+	if got := codexModel(out); got != "gpt-5.5" {
+		t.Fatalf("got %q", got)
+	}
+	if got := RunnerLabel("OpenAI Codex", codexModel(out)); got != "OpenAI Codex (GPT-5.5)" {
+		t.Fatalf("label %q", got)
+	}
+	if codexModel("no header here") != "" {
+		t.Fatal("missing header must give no model")
 	}
 }

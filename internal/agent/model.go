@@ -16,6 +16,9 @@ func ModelDisplayName(id string) string {
 	if id == "" {
 		return ""
 	}
+	if rest, ok := strings.CutPrefix(strings.ToLower(id), "gpt-"); ok {
+		return "GPT-" + rest
+	}
 	m := claudeModelIDRe.FindStringSubmatch(strings.ToLower(id))
 	if m == nil {
 		return id

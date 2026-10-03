@@ -14,7 +14,18 @@ func (codexBackend) CoAuthor() string { return "Codex <noreply@openai.com>" }
 
 func (b codexBackend) Run(ctx context.Context, opts RunOptions) (Usage, error) {
 	out, err := runCLI(ctx, b.CLI(), codexArgs(opts), nil, opts)
-	return ParseUsage(out), err
+	usage := ParseUsage(out)
+	usage.Model = codexModel(out)
+	return usage, err
+}
+
+var codexModelRe = regexp.MustCompile(`(?m)^model:[ \t]*(\S+)[ \t]*$`)
+
+func codexModel(output string) string {
+	if m := codexModelRe.FindStringSubmatch(output); m != nil {
+		return m[1]
+	}
+	return ""
 }
 
 func codexArgs(opts RunOptions) []string {
