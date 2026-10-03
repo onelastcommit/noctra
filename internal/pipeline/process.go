@@ -472,7 +472,8 @@ func (p *Pipeline) process(ctx context.Context, issue source.Ticket) {
 		subj := conventionalSubject(ccType, breaking, issue.Title, id)
 		prTitle, commitSubject = subj, subj
 	}
-	commitBody := fmt.Sprintf("Implemented by Noctra using %s\n\nTicket: %s", backend.Label(), issue.URL)
+	runner := agent.RunnerLabel(backend.Label(), usage.Model)
+	commitBody := fmt.Sprintf("Implemented by Noctra using %s\n\nTicket: %s", runner, issue.URL)
 	if useCC && breaking {
 		commitBody += fmt.Sprintf("\n\nBREAKING CHANGE: %s", issue.Title)
 	}
@@ -542,8 +543,8 @@ func (p *Pipeline) process(ctx context.Context, issue source.Ticket) {
 	}
 
 	prBody := fmt.Sprintf(
-		"## %s: %s\n\n**Ticket:** %s\n\n## What was implemented\n\n%s\n\n---\n\n*Implemented by [Noctra](https://github.com/onelastcommit/noctra) 🌙 using %s*\n%s",
-		id, issue.Title, issue.URL, summary, backend.Label(), github.NoctraPRBodyMarker)
+		"## %s: %s\n\n**Ticket:** %s\n\n## What was implemented\n\n%s\n\n---\n\n*Implemented by [Noctra](https://github.com/onelastcommit/noctra) 🦉 using %s*\n%s",
+		id, issue.Title, issue.URL, summary, runner, github.NoctraPRBodyMarker)
 
 	prURL, err := ghCreatePR(ctx, resolved.Path,
 		prTitle,

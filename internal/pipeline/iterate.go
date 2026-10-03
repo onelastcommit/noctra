@@ -65,7 +65,7 @@ func (p *Pipeline) prPollOnce(ctx context.Context, wg *sync.WaitGroup) {
 	slog.Info("pr poll", "prs_with_changes", len(changes))
 
 	for _, ch := range changes {
-		identifier := identifierFromBranch(ch.PR.HeadRefName)
+		identifier := identifierFromBranch(ch.PR.HeadRefName, ch.PR.URL)
 		newComments, newReviews := countEvents(ch.Events)
 		ciFailed := ch.CIFailure != nil
 
@@ -415,8 +415,8 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	}
 	if staged {
 		commitMsg := appendCoAuthorTrailer(
-			fmt.Sprintf("fix: address PR feedback on %s\n\nFollow-up commit by Noctra (%s).",
-				identifier, engagementSummary(ch)),
+			fmt.Sprintf("fix: address PR feedback on %s\n\nFollow-up commit by Noctra using %s (%s).",
+				identifier, agent.RunnerLabel(backend.Label(), usage.Model), engagementSummary(ch)),
 			backend.CoAuthor())
 		if err := runIn(ctx, wt.Path, "git", "commit", "-m", commitMsg); err != nil {
 			logger.Error("git commit failed", "err", err)
@@ -709,9 +709,14 @@ func prRepoOwnerRepo(prURL string) (string, error) {
 	return parts[0] + "/" + parts[1], nil
 }
 
-func identifierFromBranch(branch string) string {
+func identifierFromBranch(branch, prURL string) string {
 	if !strings.HasPrefix(branch, "noctra/") {
 		return ""
+	}
+	if suffix, ok := sweep.TaskSuffixFromBranch(branch); ok {
+		if ownerRepo, err := prRepoOwnerRepo(prURL); err == nil {
+			return sweep.SweepIdentifier(repo.Slug(ownerRepo), suffix)
+		}
 	}
 	return strings.ToUpper(strings.TrimPrefix(branch, "noctra/"))
 }

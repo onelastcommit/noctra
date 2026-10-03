@@ -116,20 +116,34 @@ func TestFilterTasks_UnknownNameIgnored(t *testing.T) {
 	}
 }
 
-func TestSweepBranchName(t *testing.T) {
-	tests := []struct {
-		repoSlug string
-		suffix   string
-		want     string
-	}{
-		{"repo-a", "lint-cleanup", "noctra/sweep-repo-a-lint-cleanup"},
-		{"Repo-B", "dead-code", "noctra/sweep-repo-b-dead-code"},
-		{"owner/repo-c", "lint-cleanup", "noctra/sweep-owner-repo-c-lint-cleanup"},
+func TestSweepBranchName_OmitsTheRepo(t *testing.T) {
+	for suffix, want := range map[string]string{
+		"lint-cleanup": "noctra/sweep-lint-cleanup",
+		"Deps-Update":  "noctra/sweep-deps-update",
+	} {
+		if got := SweepBranchName(suffix); got != want {
+			t.Errorf("SweepBranchName(%q) = %q, want %q", suffix, got, want)
+		}
 	}
-	for _, tt := range tests {
-		got := SweepBranchName(tt.repoSlug, tt.suffix)
-		if got != tt.want {
-			t.Errorf("SweepBranchName(%q, %q) = %q, want %q", tt.repoSlug, tt.suffix, got, tt.want)
+}
+
+func TestTaskSuffixFromBranch(t *testing.T) {
+	cases := []struct {
+		branch string
+		want   string
+		ok     bool
+	}{
+		{"noctra/sweep-deps-update", "deps-update", true},
+		{"noctra/sweep-lint-cleanup", "lint-cleanup", true},
+		{"noctra/sweep-onelastcommit-onenote-mcp-deps-update", "", false},
+		{"noctra/sweep-unknown-task", "", false},
+		{"noctra/eng-42", "", false},
+		{"sweep-deps-update", "", false},
+	}
+	for _, c := range cases {
+		got, ok := TaskSuffixFromBranch(c.branch)
+		if got != c.want || ok != c.ok {
+			t.Errorf("TaskSuffixFromBranch(%q) = %q, %v; want %q, %v", c.branch, got, ok, c.want, c.ok)
 		}
 	}
 }

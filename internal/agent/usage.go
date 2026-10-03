@@ -12,6 +12,7 @@ type Usage struct {
 	OutputTokens int64
 	TotalTokens  int64
 	CostUSD      float64
+	Model        string
 }
 
 var (
@@ -55,9 +56,10 @@ func parseCommaInt(s string) int64 {
 }
 
 type claudeResult struct {
-	Type         string  `json:"type"`
-	Result       string  `json:"result"`
-	TotalCostUSD float64 `json:"total_cost_usd"`
+	Type         string                `json:"type"`
+	Result       string                `json:"result"`
+	TotalCostUSD float64               `json:"total_cost_usd"`
+	ModelUsage   map[string]modelShare `json:"modelUsage"`
 	Usage        struct {
 		InputTokens              int64 `json:"input_tokens"`
 		OutputTokens             int64 `json:"output_tokens"`
@@ -81,5 +83,6 @@ func ParseClaudeJSON(stdout string) (usage Usage, result string, ok bool) {
 		OutputTokens: r.Usage.OutputTokens,
 		TotalTokens:  in + r.Usage.OutputTokens,
 		CostUSD:      r.TotalCostUSD,
+		Model:        primaryModel(r.ModelUsage),
 	}, r.Result, true
 }
