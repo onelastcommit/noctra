@@ -300,7 +300,7 @@ func (p *Pipeline) Run(ctx context.Context) error {
 		go p.runSweepLoop(loopCtx, &wg)
 	}
 
-	if p.cfg.AuthCheckInterval > 0 {
+	if p.cfg.AuthCheckSchedule != "" {
 		wg.Add(1)
 		go p.runAuthCheckLoop(loopCtx, &wg)
 	}
@@ -776,8 +776,8 @@ func (p *Pipeline) banner() {
 	}
 	fmt.Printf("   Sweep:          %s\n", sweepMode)
 	authCheckMode := "Disabled"
-	if p.cfg.AuthCheckInterval > 0 {
-		authCheckMode = fmt.Sprintf("Every %s", p.cfg.AuthCheckInterval)
+	if p.cfg.AuthCheckSchedule != "" {
+		authCheckMode = fmt.Sprintf("cron %q", p.cfg.AuthCheckSchedule)
 	}
 	fmt.Printf("   Auth check:     %s\n", authCheckMode)
 	fmt.Printf("   Plan-confirm:   %s\n", planConfirmMode)

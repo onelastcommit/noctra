@@ -11,12 +11,12 @@ import (
 
 	"github.com/onelastcommit/noctra/internal/agent"
 	"github.com/onelastcommit/noctra/internal/authcheck"
+	"github.com/onelastcommit/noctra/internal/config"
 	"github.com/onelastcommit/noctra/internal/ghauth"
 	"github.com/onelastcommit/noctra/internal/github"
 	"github.com/onelastcommit/noctra/internal/notify"
+	"github.com/onelastcommit/noctra/internal/sweep"
 )
-
-const authRemindEvery = 24 * time.Hour
 
 func (p *Pipeline) authChecks() []authcheck.Check {
 	var checks []authcheck.Check
@@ -47,13 +47,34 @@ func (p *Pipeline) knownOwnerRepos(ctx context.Context) []string {
 	return repos
 }
 
+func authCheckSchedule(expr string) *sweep.CronSchedule {
+	sched, err := sweep.ParseCron(expr)
+	if err == nil {
+		return sched
+	}
+	slog.Warn("invalid AUTH_CHECK_SCHEDULE; using the default", "schedule", expr, "default", config.DefaultAuthCheckSchedule, "err", err)
+	sched, _ = sweep.ParseCron(config.DefaultAuthCheckSchedule)
+	return sched
+}
+
 func (p *Pipeline) runAuthCheckLoop(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
-	tracker := authcheck.NewTracker(authRemindEvery)
+	sched := authCheckSchedule(p.cfg.AuthCheckSchedule)
+	tracker := authcheck.NewTracker()
 	checks := p.authChecks()
-	ticker := time.NewTicker(p.cfg.AuthCheckInterval)
-	defer ticker.Stop()
 	for {
+		next := sched.Next(time.Now())
+		if next.IsZero() {
+			slog.Warn("AUTH_CHECK_SCHEDULE never fires; auth check disabled", "schedule", p.cfg.AuthCheckSchedule)
+			return
+		}
+		timer := time.NewTimer(time.Until(next))
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return
+		case <-timer.C:
+		}
 		results := authcheck.RunAll(ctx, checks)
 		if ctx.Err() != nil {
 			return
@@ -63,13 +84,8 @@ func (p *Pipeline) runAuthCheckLoop(ctx context.Context, wg *sync.WaitGroup) {
 				slog.Warn("auth check failed", "service", r.Name, "detail", r.Detail, "fix", r.Fix)
 			}
 		}
-		if msg := authReportMessage(tracker.Observe(time.Now(), results)); msg != "" {
+		if msg := authReportMessage(tracker.Observe(results)); msg != "" {
 			p.notifier.Send(ctx, msg)
-		}
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
 		}
 	}
 }

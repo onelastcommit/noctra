@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 	"testing"
-	"time"
 )
 
 type fakeExec map[string]struct {
@@ -131,34 +130,27 @@ func TestLinear(t *testing.T) {
 }
 
 func TestTracker(t *testing.T) {
-	tr := NewTracker(24 * time.Hour)
-	t0 := time.Date(2026, 10, 3, 0, 0, 0, 0, time.UTC)
+	tr := NewTracker()
 	bad := []Result{{Name: "Claude Code", Detail: "not logged in"}, {Name: "Linear", OK: true}}
 
-	if rep := tr.Observe(t0, bad); len(rep.Failing) != 1 || rep.Failing[0].Name != "Claude Code" {
+	if rep := tr.Observe(bad); len(rep.Failing) != 1 || rep.Failing[0].Name != "Claude Code" {
 		t.Fatalf("first failure should alert, got %+v", rep)
 	}
-	if rep := tr.Observe(t0.Add(time.Hour), bad); !rep.Empty() {
-		t.Fatalf("repeat failure inside the reminder window should be quiet, got %+v", rep)
-	}
-	if rep := tr.Observe(t0.Add(25*time.Hour), bad); len(rep.Reminders) != 1 {
-		t.Fatalf("failure past the reminder window should remind, got %+v", rep)
-	}
-	if rep := tr.Observe(t0.Add(26*time.Hour), bad); !rep.Empty() {
-		t.Fatalf("reminder clock should reset, got %+v", rep)
+	if rep := tr.Observe(bad); len(rep.Reminders) != 1 || len(rep.Failing) != 0 {
+		t.Fatalf("each later check while broken should remind, got %+v", rep)
 	}
 	good := []Result{{Name: "Claude Code", OK: true}, {Name: "Linear", OK: true}}
-	if rep := tr.Observe(t0.Add(27*time.Hour), good); len(rep.Recovered) != 1 {
+	if rep := tr.Observe(good); len(rep.Recovered) != 1 {
 		t.Fatalf("recovery should be announced, got %+v", rep)
 	}
-	if rep := tr.Observe(t0.Add(28*time.Hour), good); !rep.Empty() {
+	if rep := tr.Observe(good); !rep.Empty() {
 		t.Fatalf("steady healthy state should be quiet, got %+v", rep)
 	}
 }
 
 func TestTracker_IgnoresSkipped(t *testing.T) {
-	tr := NewTracker(time.Hour)
-	if rep := tr.Observe(time.Now(), []Result{{Name: "Antigravity", Skipped: true}}); !rep.Empty() {
+	tr := NewTracker()
+	if rep := tr.Observe([]Result{{Name: "Antigravity", Skipped: true}}); !rep.Empty() {
 		t.Fatalf("skipped checks should never alert, got %+v", rep)
 	}
 }

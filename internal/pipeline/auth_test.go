@@ -4,9 +4,11 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/onelastcommit/noctra/internal/agent"
 	"github.com/onelastcommit/noctra/internal/authcheck"
+	"github.com/onelastcommit/noctra/internal/config"
 )
 
 func TestDescribeAgentFailure_AuthNamesTheFix(t *testing.T) {
@@ -69,5 +71,20 @@ func TestAuthReportMessage(t *testing.T) {
 	reminder := authReportMessage(authcheck.Report{Reminders: []authcheck.Result{{Name: "GitHub CLI", Detail: "token expired"}}})
 	if !strings.Contains(reminder, "Still not authenticated") {
 		t.Errorf("reminder should say it is still failing, got %q", reminder)
+	}
+}
+
+func TestAuthCheckSchedule_DefaultsToNoon(t *testing.T) {
+	morning := time.Date(2026, 10, 3, 9, 30, 0, 0, time.Local)
+	for _, expr := range []string{config.DefaultAuthCheckSchedule, "not a cron"} {
+		next := authCheckSchedule(expr).Next(morning)
+		want := time.Date(2026, 10, 3, 12, 0, 0, 0, time.Local)
+		if !next.Equal(want) {
+			t.Errorf("authCheckSchedule(%q).Next(09:30) = %v, want %v", expr, next, want)
+		}
+	}
+	afternoon := time.Date(2026, 10, 3, 12, 0, 0, 0, time.Local)
+	if next := authCheckSchedule(config.DefaultAuthCheckSchedule).Next(afternoon); next.Day() != 4 || next.Hour() != 12 {
+		t.Errorf("after noon the next check should be noon tomorrow, got %v", next)
 	}
 }

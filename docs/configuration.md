@@ -87,7 +87,7 @@ Set `TELEGRAM_ENABLED=true` with a bot token and chat ID, and Noctra sends updat
 
 ## Credential health check
 
-Every `AUTH_CHECK_INTERVAL` seconds (default `3600`; `0` disables) Noctra checks that GitHub, Linear and the agent CLI are still logged in, without spending tokens. A broken login sends one 🔑 alert naming the service and the command to fix it, a reminder each day it stays broken, and a ✅ when it recovers. Antigravity has no status command, so its login is only reported when a run fails.
+Once a day at noon (`AUTH_CHECK_SCHEDULE`, a cron expression in the host's local time, default `0 12 * * *`; `off` disables) Noctra checks that GitHub, Linear and the agent CLI are still logged in, without spending tokens. While a login is broken that check sends one 🔑 message naming the service and the command to fix it; the first check after it is fixed sends a ✅. A healthy check sends nothing. Antigravity has no status command, so its login is only reported when a run fails.
 
 ## Dashboard
 

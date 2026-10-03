@@ -10,7 +10,7 @@ ticket loop  → source.Fetch → pipeline.process (bounded goroutine)
   → (optional) review.Gate → commit/push → gh pr create → source.MarkReady
 PR loop      (AUTO_ITERATE_PRS) → watch.Scan → pipeline.iteratePR → push to the same branch
 sweep loop   (SWEEP_ENABLED)    → scheduler.Plan → pipeline.processSweepTask → maintenance PR
-auth loop    (AUTH_CHECK_INTERVAL, on by default) → authcheck.RunAll → authcheck.Tracker → notify on break / daily reminder / recovery
+auth loop    (AUTH_CHECK_SCHEDULE, daily at noon by default) → authcheck.RunAll → authcheck.Tracker → notify while broken / on recovery
 ```
 
 - `TRIGGER_MODE=state` (default) polls the `TRIGGER_STATE` column. `TRIGGER_MODE=label` polls for `TRIGGER_LABEL` regardless of column and **removes** the label after dispatch so the ticket isn't re-polled; the trigger-state ID is then not resolved, but the in-review state still is.

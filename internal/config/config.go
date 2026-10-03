@@ -81,7 +81,7 @@ const (
 	DefaultRateLimitStrategy = "pause"
 	DefaultRateLimitCooldown = 30 * time.Minute
 
-	DefaultAuthCheckInterval = time.Hour
+	DefaultAuthCheckSchedule = "0 12 * * *"
 
 	DefaultSweepInterval  = 24 * time.Hour
 	DefaultSweepMaxTasks  = 5
@@ -164,7 +164,7 @@ type Config struct {
 	RateLimitStrategy string
 	RateLimitCooldown time.Duration
 
-	AuthCheckInterval time.Duration
+	AuthCheckSchedule string
 
 	SweepEnabled  bool
 	SweepSchedule string
@@ -290,8 +290,10 @@ func Load(scriptDir string) (*Config, error) {
 	cooldownSecs := getint(fileEnv, "RATE_LIMIT_COOLDOWN", int(DefaultRateLimitCooldown/time.Second))
 	cfg.RateLimitCooldown = time.Duration(cooldownSecs) * time.Second
 
-	authCheckSecs := getint(fileEnv, "AUTH_CHECK_INTERVAL", int(DefaultAuthCheckInterval/time.Second))
-	cfg.AuthCheckInterval = time.Duration(authCheckSecs) * time.Second
+	cfg.AuthCheckSchedule = strings.TrimSpace(getenv(fileEnv, "AUTH_CHECK_SCHEDULE", DefaultAuthCheckSchedule))
+	if strings.EqualFold(cfg.AuthCheckSchedule, "off") {
+		cfg.AuthCheckSchedule = ""
+	}
 
 	cfg.SweepEnabled = getbool(fileEnv, "SWEEP_ENABLED", false)
 	cfg.SweepSchedule = getenv(fileEnv, "SWEEP_SCHEDULE", "")
