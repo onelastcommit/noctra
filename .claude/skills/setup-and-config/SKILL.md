@@ -145,7 +145,7 @@ Container and cloud overrides:
 REPOS_BASE=/data/repos
 WORKTREE_BASE=/data/worktrees
 LOG_DIR=/data/logs
-STATE_FILE=/data/state.json
+STATE_DB=/data/state.db
 GH_TOKEN=
 GIT_USER_NAME=Noctra
 GIT_USER_EMAIL=noctra@example.local
