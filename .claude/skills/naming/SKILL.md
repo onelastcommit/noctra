@@ -34,7 +34,7 @@ Every name Noctra writes is read back later by something else: a branch name by 
 
 ## PR bodies and replies
 
-- Footer: `*<phrase> by [Noctra](https://github.com/onelastcommit/noctra) 🌙 using <runner label>*`.
+- Footer: `*<phrase> by [Noctra](https://github.com/onelastcommit/noctra) 🦉 using <runner label>*`.
 - `github.NoctraPRBodyMarker` (`<!-- noctra-authored -->`) goes in every PR body Noctra writes, ticket, sweep or salvaged draft alike. The watcher also accepts the legacy visible footer `by [Noctra]` for PRs that predate the marker.
 - `github.NoctraReplyMarker` (`<!-- noctra-reply -->`) goes in every comment and thread reply Noctra posts, including Gemini's inline findings. Without it the watcher re-reads Noctra's own words as review feedback and loops.
 
