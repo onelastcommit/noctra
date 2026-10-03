@@ -395,16 +395,14 @@ func (p *Pipeline) processSweepTask(ctx context.Context, job sweep.Job, identifi
 	}
 
 	branch := sweep.SweepBranchName(job.Task.BranchSuffix)
-	for _, candidate := range []string{branch, sweep.LegacySweepBranchName(job.RepoSlug, job.Task.BranchSuffix)} {
-		openPR, err := ghOpenPRForBranch(ctx, job.RepoPath, candidate)
-		if err != nil {
-			logger.Warn("could not check for an open sweep PR, skipping", "branch", candidate, "err", err)
-			return
-		}
-		if openPR != "" {
-			logger.Info("previous sweep PR still open, skipping", "url", openPR)
-			return
-		}
+	openPR, err := ghOpenPRForBranch(ctx, job.RepoPath, branch)
+	if err != nil {
+		logger.Warn("could not check for an open sweep PR, skipping", "branch", branch, "err", err)
+		return
+	}
+	if openPR != "" {
+		logger.Info("previous sweep PR still open, skipping", "url", openPR)
+		return
 	}
 
 	wt, err := repo.CreateWorktreeWithBranch(ctx, p.cfg.WorktreeBase, identifier, job.RepoPath, job.MainBranch, branch)

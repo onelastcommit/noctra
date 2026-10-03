@@ -5,7 +5,7 @@ description: Use when changing how Noctra names or labels what it creates on Git
 
 # Naming in Noctra
 
-Every name Noctra writes is read back later by something else: a branch name by the PR watcher, a footer by the lessons extractor, an identifier by the active set. Treat each one as a **round trip**. A change to how a name is written is only finished when every reader listed below still recognises both the new form and any form already out in the world (open PRs, old commits, existing clones).
+Every name Noctra writes is read back later by something else: a branch name by the PR watcher, a footer by the lessons extractor, an identifier by the active set. Treat each one as a **round trip**. A change to how a name is written is only finished when every reader listed below recognises the new form.
 
 ## Branches
 
@@ -13,7 +13,6 @@ Every name Noctra writes is read back later by something else: a branch name by 
 |---|---|---|---|
 | Ticket | `noctra/<identifier, lowercased>`, e.g. `noctra/eng-460` | `repo.BranchName` | `github.ListNoctraPRs` (prefix), `identifierFromBranch` (`pipeline/iterate.go`), `cleanup` (prefix) |
 | Sweep | `noctra/sweep-<task>`, e.g. `noctra/sweep-deps-update` | `sweep.SweepBranchName` | `sweep.TaskSuffixFromBranch`, `identifierFromBranch`, the open-PR check in `processSweepTask` |
-| Sweep, legacy | `noctra/sweep-<repo-slug>-<task>` | nothing new (`sweep.LegacySweepBranchName` reproduces it) | the open-PR check and `identifierFromBranch`, so sweep PRs opened before the rename are neither duplicated nor orphaned |
 
 - The repo is left out of sweep branch names because a branch already lives in its repo. It stays in the **identifier** (below).
 - `noctra/` is reserved for branches Noctra creates. The rule for humans and other agents is in `CLAUDE.md`.

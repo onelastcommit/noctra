@@ -151,9 +151,6 @@ func TestIdentifierFromBranch_SweepRoundTrip(t *testing.T) {
 	if got := identifierFromBranch(sweep.SweepBranchName("lint-cleanup"), prURL); got != want {
 		t.Errorf("short sweep branch identifier = %q, want %q", got, want)
 	}
-	if got := identifierFromBranch(sweep.LegacySweepBranchName(repo.Slug("Owner/Repo-A"), "lint-cleanup"), prURL); got != want {
-		t.Errorf("legacy sweep branch identifier = %q, want %q", got, want)
-	}
 }
 
 func TestShouldPostFallbackComment(t *testing.T) {

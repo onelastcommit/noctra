@@ -50,10 +50,6 @@ func SweepBranchName(taskSuffix string) string {
 	return sweepBranchPrefix + strings.ToLower(taskSuffix)
 }
 
-func LegacySweepBranchName(repoSlug, taskSuffix string) string {
-	return "noctra/" + strings.ToLower(SweepIdentifier(repoSlug, taskSuffix))
-}
-
 func TaskSuffixFromBranch(branch string) (string, bool) {
 	rest, ok := strings.CutPrefix(strings.ToLower(branch), sweepBranchPrefix)
 	if !ok {

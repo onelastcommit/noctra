@@ -127,23 +127,6 @@ func TestSweepBranchName_OmitsTheRepo(t *testing.T) {
 	}
 }
 
-func TestLegacySweepBranchName(t *testing.T) {
-	tests := []struct {
-		repoSlug string
-		suffix   string
-		want     string
-	}{
-		{"repo-a", "lint-cleanup", "noctra/sweep-repo-a-lint-cleanup"},
-		{"Repo-B", "dead-code", "noctra/sweep-repo-b-dead-code"},
-		{"onelastcommit-onenote-mcp", "deps-update", "noctra/sweep-onelastcommit-onenote-mcp-deps-update"},
-	}
-	for _, tt := range tests {
-		if got := LegacySweepBranchName(tt.repoSlug, tt.suffix); got != tt.want {
-			t.Errorf("LegacySweepBranchName(%q, %q) = %q, want %q", tt.repoSlug, tt.suffix, got, tt.want)
-		}
-	}
-}
-
 func TestTaskSuffixFromBranch(t *testing.T) {
 	cases := []struct {
 		branch string
