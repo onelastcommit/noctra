@@ -21,6 +21,19 @@ on:
       - "go.mod"
       - ".github/workflows/docker.yml"
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Release tag to build and publish, e.g. v0.44.0 (empty builds the selected ref)"
+        required: false
+        type: string
+  # Called by tag-on-merge after a release: tags it pushes with GITHUB_TOKEN
+  # never trigger the `push: tags` event above.
+  workflow_call:
+    inputs:
+      version:
+        description: "Release tag to build and publish, e.g. v0.44.0"
+        required: true
+        type: string
 
 env:
   IMAGE: ghcr.io/${{ github.repository }}
@@ -28,7 +41,7 @@ env:
 jobs:
   # PRs only validate that the image builds — do that natively on amd64, no push.
   validate:
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && inputs.version == ''
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -47,7 +60,7 @@ jobs:
 
   # main/tags: build each arch natively, push by digest (no tags yet).
   build:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' || inputs.version != ''
     permissions:
       contents: read
       packages: write
@@ -62,6 +75,14 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.version || '' }}
+
+      - name: Release version
+        id: rel
+        run: echo "version=${VERSION#v}" >> "$GITHUB_OUTPUT"
+        env:
+          VERSION: ${{ inputs.version }}
 
       # github.repository can contain uppercase (the owner login); Docker refs
       # must be lowercase. metadata-action lowercases its own output, but the
@@ -93,7 +114,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VERSION=${{ steps.meta.outputs.version || github.sha }}
+            VERSION=${{ steps.rel.outputs.version || steps.meta.outputs.version || github.sha }}
           outputs: type=image,name=${{ steps.img.outputs.name }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
@@ -120,7 +141,7 @@ jobs:
 
   # Stitch the per-arch digests into a single multi-arch manifest under the tags.
   merge:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' || inputs.version != ''
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -157,6 +178,8 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{version}},value=${{ inputs.version }},enable=${{ inputs.version != '' }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ inputs.version }},enable=${{ inputs.version != '' }}
             type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Create manifest list and push
