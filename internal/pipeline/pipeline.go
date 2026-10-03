@@ -331,11 +331,7 @@ func (p *Pipeline) Run(ctx context.Context) error {
 				continue
 			}
 
-			if reason := p.budget.ExceededReason(); reason != "" {
-				p.flagBudgetExceeded(reason)
-				p.notifier.Send(ctx, fmt.Sprintf(
-					"⏸ *Daily budget exceeded*\n%s\nDispatching paused until next UTC midnight.",
-					notify.EscapeMarkdown(reason)))
+			if p.pauseIfBudgetExceeded(ctx) {
 				continue
 			}
 

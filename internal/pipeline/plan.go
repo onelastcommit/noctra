@@ -242,8 +242,7 @@ func (p *Pipeline) processPlanOnly(ctx context.Context, issue source.Ticket) {
 
 	output := agent.ReadAfter(logFile, offset)
 
-	p.budget.Record(usage.TotalTokens, usage.CostUSD)
-	p.recordUsage(usage, "plan", id, "", backend)
+	p.chargeUsage(usage, "plan", id, "", backend)
 	if reason := p.budget.ExceededReason(); reason != "" {
 		p.flagBudgetExceeded(reason)
 	}
