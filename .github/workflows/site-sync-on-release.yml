@@ -69,7 +69,7 @@ jobs:
           fi
 
           title="getnoctra.dev: document $TAG"
-          body=$(printf 'Update the marketing/docs site at getnoctra.dev so it reflects Noctra %s.\n\n## Release notes\n\n%s\n\n## What to do\n- Read the release notes above and update anything user-facing to match.\n- Likely files: `src/components/Features.astro`, `src/components/HowItWorks.astro`, `src/components/Compare.astro`, `src/pages/docs.astro`.\n- Keep the existing design, structure, and tone — make minimal, accurate edits.\n- If nothing user-facing changed in this release, respond: BLOCKED: Nothing on the site needs updating for %s.\n\nRepo: ahmadAlMezaal/noctra-site\nAuto-filed by the release workflow in %s.\n' "$TAG" "$notes" "$TAG" "$REPO")
+          body=$(printf 'Update the marketing/docs site at getnoctra.dev so it reflects Noctra %s.\n\n## Release notes\n\n%s\n\n## What to do\n- Read the release notes above and update anything user-facing to match.\n- Likely files: `src/components/Features.astro`, `src/components/HowItWorks.astro`, `src/components/Compare.astro`, `src/pages/docs.astro`.\n- Keep the existing design, structure, and tone — make minimal, accurate edits.\n- If nothing user-facing changed in this release, respond: BLOCKED: Nothing on the site needs updating for %s.\n\nRepo: onelastcommit/noctra-site\nAuto-filed by the release workflow in %s.\n' "$TAG" "$notes" "$TAG" "$REPO")
 
           create=$(jq -n \
             --arg title "$title" --arg desc "$body" \
