@@ -188,6 +188,10 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	p.ackEngagement(ctx, ch)
 
 	backend := p.resolveIterateBackend(ctx, ch.PR.URL, identifier)
+	run := state.RunHistory{
+		Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
+		AgentBackend: backend.Name(), RunType: "iterate", StartedAt: startedAt,
+	}
 
 	p.notifier.Send(ctx, fmt.Sprintf("🔄 *%s* — %s on PR #%d", notify.EscapeMarkdown(displayName(identifier)), engagementSummary(ch), ch.PR.Number))
 
@@ -198,11 +202,7 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 		if err != nil {
 			logger.Error("could not parse PR repo from URL", "err", err)
 			p.recordIteration(ctx, ch, identifier, ch.PR.Number, "")
-			p.recordRun(state.RunHistory{
-				Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
-				AgentBackend: backend.Name(), RunType: "iterate",
-				StartedAt: startedAt, FinishedAt: time.Now(), Status: "failed",
-			})
+			p.finishRun(run, "failed")
 			return
 		}
 	}
@@ -210,13 +210,10 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	if err != nil {
 		logger.Error("repo resolve (direct) failed", "err", err, "ref", ref)
 		p.recordIteration(ctx, ch, identifier, ch.PR.Number, "")
-		p.recordRun(state.RunHistory{
-			Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
-			AgentBackend: backend.Name(), RunType: "iterate",
-			StartedAt: startedAt, FinishedAt: time.Now(), Status: "failed",
-		})
+		p.finishRun(run, "failed")
 		return
 	}
+	run.Repo = filepath.Base(resolved.Path)
 
 	p.mu.Lock()
 	p.activeRepos[identifier] = filepath.Base(resolved.Path)
@@ -227,12 +224,7 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	if err != nil {
 		logger.Error("resume worktree failed", "err", err)
 		p.recordIteration(ctx, ch, identifier, ch.PR.Number, "")
-		p.recordRun(state.RunHistory{
-			Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
-			Repo: filepath.Base(resolved.Path), AgentBackend: backend.Name(),
-			RunType: "iterate", StartedAt: startedAt, FinishedAt: time.Now(),
-			Status: "failed",
-		})
+		p.finishRun(run, "failed")
 		return
 	}
 	logger.Info("resume worktree", "path", wt.Path)
@@ -329,30 +321,18 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	}
 
 	if errors.Is(runErr, agent.ErrTokenCapExceeded) {
-		p.budget.Record(usage.TotalTokens, usage.CostUSD)
-		p.recordUsage(usage, "iterate", identifier, ch.PR.URL, backend)
+		p.chargeUsage(usage, "iterate", identifier, ch.PR.URL, backend)
 		logger.Warn("iteration aborted: per-run token ceiling reached",
 			"max_tokens", p.cfg.AgentMaxTokens, "tokens", usage.TotalTokens)
 		p.recordIteration(ctx, ch, identifier, ch.PR.Number, issueID)
-		p.recordRun(state.RunHistory{
-			Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
-			Repo: filepath.Base(resolved.Path), AgentBackend: backend.Name(),
-			RunType: "iterate", StartedAt: startedAt, FinishedAt: time.Now(),
-			Status: "failed",
-		})
+		p.finishRun(run, "failed")
 		return
 	}
 
 	output := agent.ReadAfter(logFile, offset)
 
-	p.budget.Record(usage.TotalTokens, usage.CostUSD)
-	p.recordUsage(usage, "iterate", identifier, ch.PR.URL, backend)
-	if reason := p.budget.ExceededReason(); reason != "" {
-		p.flagBudgetExceeded(reason)
-		p.notifier.Send(ctx, fmt.Sprintf(
-			"⏸ *Daily budget exceeded*\n%s\nDispatching paused until next UTC midnight.",
-			notify.EscapeMarkdown(reason)))
-	}
+	p.chargeUsage(usage, "iterate", identifier, ch.PR.URL, backend)
+	p.pauseIfBudgetExceeded(ctx)
 
 	if rateLimited(backend, runErr, output) {
 		logger.Warn("rate limit detected during iteration")
@@ -362,19 +342,10 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	if runErr != nil {
 		failure := describeAgentFailure(backend, output, runErr)
 		logger.Error("agent run failed", "err", runErr, "detail", failure.detail, "auth", failure.auth)
-		icon := "❌"
-		if failure.auth {
-			icon = "🔑"
-		}
 		p.notifier.Send(ctx, fmt.Sprintf("%s *%s* — follow-up on PR #%d failed\n%s",
-			icon, notify.EscapeMarkdown(displayName(identifier)), ch.PR.Number, notify.EscapeMarkdown(failure.detail)))
+			failure.icon(), notify.EscapeMarkdown(displayName(identifier)), ch.PR.Number, notify.EscapeMarkdown(failure.detail)))
 		p.recordIteration(ctx, ch, identifier, ch.PR.Number, issueID)
-		p.recordRun(state.RunHistory{
-			Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
-			Repo: filepath.Base(resolved.Path), AgentBackend: backend.Name(),
-			RunType: "iterate", StartedAt: startedAt, FinishedAt: time.Now(),
-			Status: "failed",
-		})
+		p.finishRun(run, "failed")
 		return
 	}
 
@@ -386,12 +357,7 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 				blocked, p.cfg.TriggerState))
 		}
 		p.recordIteration(ctx, ch, identifier, ch.PR.Number, issueID)
-		p.recordRun(state.RunHistory{
-			Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
-			Repo: filepath.Base(resolved.Path), AgentBackend: backend.Name(),
-			RunType: "iterate", StartedAt: startedAt, FinishedAt: time.Now(),
-			Status: "blocked",
-		})
+		p.finishRun(run, "blocked")
 		return
 	}
 
@@ -400,24 +366,14 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	if err := runIn(ctx, wt.Path, "git", "add", "-A"); err != nil {
 		logger.Error("git add failed", "err", err)
 		p.recordIteration(ctx, ch, identifier, ch.PR.Number, issueID)
-		p.recordRun(state.RunHistory{
-			Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
-			Repo: filepath.Base(resolved.Path), AgentBackend: backend.Name(),
-			RunType: "iterate", StartedAt: startedAt, FinishedAt: time.Now(),
-			Status: "failed",
-		})
+		p.finishRun(run, "failed")
 		return
 	}
 	staged, err := hasStagedChanges(ctx, wt.Path)
 	if err != nil {
 		logger.Error("git diff --cached failed", "err", err)
 		p.recordIteration(ctx, ch, identifier, ch.PR.Number, issueID)
-		p.recordRun(state.RunHistory{
-			Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
-			Repo: filepath.Base(resolved.Path), AgentBackend: backend.Name(),
-			RunType: "iterate", StartedAt: startedAt, FinishedAt: time.Now(),
-			Status: "failed",
-		})
+		p.finishRun(run, "failed")
 		return
 	}
 	if staged {
@@ -428,12 +384,7 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 		if err := runIn(ctx, wt.Path, "git", "commit", "-m", commitMsg); err != nil {
 			logger.Error("git commit failed", "err", err)
 			p.recordIteration(ctx, ch, identifier, ch.PR.Number, issueID)
-			p.recordRun(state.RunHistory{
-				Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
-				Repo: filepath.Base(resolved.Path), AgentBackend: backend.Name(),
-				RunType: "iterate", StartedAt: startedAt, FinishedAt: time.Now(),
-				Status: "failed",
-			})
+			p.finishRun(run, "failed")
 			return
 		}
 	}
@@ -441,12 +392,7 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	if err != nil {
 		logger.Error("git rev-list failed", "err", err)
 		p.recordIteration(ctx, ch, identifier, ch.PR.Number, issueID)
-		p.recordRun(state.RunHistory{
-			Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
-			Repo: filepath.Base(resolved.Path), AgentBackend: backend.Name(),
-			RunType: "iterate", StartedAt: startedAt, FinishedAt: time.Now(),
-			Status: "failed",
-		})
+		p.finishRun(run, "failed")
 		return
 	}
 	headAfter := gitHead(ctx, wt.Path)
@@ -456,12 +402,7 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 			if err := runIn(ctx, wt.Path, "git", "push", "origin", wt.Branch); err != nil {
 				logger.Error("git push failed", "err", err)
 				p.recordIteration(ctx, ch, identifier, ch.PR.Number, issueID)
-				p.recordRun(state.RunHistory{
-					Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
-					Repo: filepath.Base(resolved.Path), AgentBackend: backend.Name(),
-					RunType: "iterate", StartedAt: startedAt, FinishedAt: time.Now(),
-					Status: "failed",
-				})
+				p.finishRun(run, "failed")
 				return
 			}
 		}
@@ -510,12 +451,8 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	if moved || ahead {
 		iterateStatus = "pr_opened"
 	}
-	p.recordRun(state.RunHistory{
-		Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
-		Repo: filepath.Base(resolved.Path), AgentBackend: backend.Name(),
-		RunType: "iterate", StartedAt: startedAt, FinishedAt: time.Now(),
-		Status: iterateStatus, Iterations: 1,
-	})
+	run.Iterations = 1
+	p.finishRun(run, iterateStatus)
 	p.recordIteration(ctx, ch, identifier, ch.PR.Number, issueID)
 }
 

@@ -130,6 +130,13 @@ type agentFailure struct {
 	auth   bool
 }
 
+func (f agentFailure) icon() string {
+	if f.auth {
+		return "🔑"
+	}
+	return "❌"
+}
+
 func describeAgentFailure(b agent.Backend, output string, runErr error) agentFailure {
 	if line := agent.AuthFailureLine(output); line != "" {
 		return agentFailure{
