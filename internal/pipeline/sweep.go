@@ -434,7 +434,7 @@ func (p *Pipeline) processSweepTask(ctx context.Context, job sweep.Job, identifi
 		"timeout", p.cfg.SweepTimeout,
 		"max_tokens", sweepMaxTokens)
 
-	usage, runErr := backend.Run(ctx, agent.RunOptions{
+	usage, runErr := p.runAgent(ctx, backend, agent.RunOptions{
 		Workdir:   wt.Path,
 		Env:       p.agentEnv(ctx, wt.Path),
 		Prompt:    prompt,
@@ -613,7 +613,7 @@ func (p *Pipeline) processSweepTask(ctx context.Context, job sweep.Job, identifi
 
 				logger.Info("asking the agent to fix review issues")
 				fixOffset := agent.OffsetBefore(logFile)
-				fixUsage, fixErr := backend.Run(ctx, agent.RunOptions{
+				fixUsage, fixErr := p.runAgent(ctx, backend, agent.RunOptions{
 					Workdir:   wt.Path,
 					Env:       p.agentEnv(ctx, wt.Path),
 					Prompt:    fixPrompt,

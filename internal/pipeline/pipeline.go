@@ -104,7 +104,7 @@ func New(cfg *config.Config) *Pipeline {
 		linear:   linearClient,
 		resolver: repo.FromConfig(cfg),
 		notifier: buildNotifier(cfg),
-		review:   review.NewWithMode(cfg.GeminiMode, cfg.GeminiAPIKey, cfg.GeminiModel),
+		review:   review.NewWithMode(cfg.GeminiMode, cfg.GeminiAPIKey, cfg.GeminiModel).WithLanguage(agent.LanguageSection(cfg.EnglishVariant)),
 		agent:    backend,
 		budget: budget.New(budget.Config{
 			MaxDailyTokens: cfg.MaxDailyTokens,
@@ -633,6 +633,18 @@ func (p *Pipeline) flagBudgetExceeded(reason string) {
 	p.publishDashboardChange()
 }
 
+func englishLabel(variant string) string {
+	if variant == "american" {
+		return "American English"
+	}
+	return "British English"
+}
+
+func (p *Pipeline) runAgent(ctx context.Context, backend agent.Backend, opts agent.RunOptions) (agent.Usage, error) {
+	opts.Prompt += agent.LanguageSection(p.cfg.EnglishVariant)
+	return backend.Run(ctx, opts)
+}
+
 func rateLimited(b agent.Backend, runErr error, output string) bool {
 	return runErr != nil && b.HasRateLimit(output)
 }
@@ -761,6 +773,7 @@ func (p *Pipeline) banner() {
 		fmt.Printf("   Watching:       %q column\n", p.cfg.TriggerState)
 	}
 	fmt.Printf("   Agent:          %s\n", agentMode)
+	fmt.Printf("   Language:       %s\n", englishLabel(p.cfg.EnglishVariant))
 	fmt.Printf("   Review:         %s\n", reviewMode)
 	fmt.Printf("   Auto-iterate:   %s\n", autoIterMode)
 	fmt.Printf("   Release label:  %s\n", autoReleaseMode)

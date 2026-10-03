@@ -154,7 +154,7 @@ func (p *Pipeline) process(ctx context.Context, issue source.Ticket) {
 
 	offset := agent.OffsetBefore(logFile)
 
-	usage, runErr := backend.Run(ctx, agent.RunOptions{
+	usage, runErr := p.runAgent(ctx, backend, agent.RunOptions{
 		Workdir:       wt.Path,
 		Env:           p.agentEnv(ctx, wt.Path),
 		Prompt:        prompt,
@@ -358,7 +358,7 @@ func (p *Pipeline) process(ctx context.Context, issue source.Ticket) {
 
 				logger.Info("asking the agent to fix review issues")
 				fixOffset := agent.OffsetBefore(logFile)
-				fixUsage, fixErr := backend.Run(ctx, agent.RunOptions{
+				fixUsage, fixErr := p.runAgent(ctx, backend, agent.RunOptions{
 					Workdir:       wt.Path,
 					Env:           p.agentEnv(ctx, wt.Path),
 					Prompt:        fixPrompt,

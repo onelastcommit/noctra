@@ -55,10 +55,16 @@ func (r Result) Render() string {
 }
 
 type Gate struct {
-	Mode   string
-	APIKey string
-	Model  string
-	HTTP   *http.Client
+	Mode     string
+	APIKey   string
+	Model    string
+	HTTP     *http.Client
+	Language string
+}
+
+func (g *Gate) WithLanguage(section string) *Gate {
+	g.Language = section
+	return g
 }
 
 func New(apiKey, model string) *Gate {
@@ -94,9 +100,9 @@ func (g *Gate) Review(ctx context.Context, ticketTitle, ticketDescription, diff 
 	}
 
 	if g.Mode == "cli" {
-		return g.reviewCLI(ctx, buildPrompt(ticketTitle, ticketDescription, diff))
+		return g.reviewCLI(ctx, buildPrompt(ticketTitle, ticketDescription, diff)+g.Language)
 	}
-	return g.reviewAPI(ctx, buildStructuredPrompt(ticketTitle, ticketDescription, diff), true)
+	return g.reviewAPI(ctx, buildStructuredPrompt(ticketTitle, ticketDescription, diff)+g.Language, true)
 }
 
 func buildPrompt(ticketTitle, ticketDescription, diff string) string {
