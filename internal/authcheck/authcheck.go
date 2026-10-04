@@ -119,7 +119,7 @@ func claudeStatus(ctx context.Context, run Exec, getenv func(string) string) Res
 	var status struct {
 		LoggedIn bool `json:"loggedIn"`
 	}
-	if jsonErr := json.Unmarshal([]byte(jsonObject(out)), &status); jsonErr == nil {
+	if jsonErr := json.Unmarshal([]byte(JSONObject(out)), &status); jsonErr == nil {
 		if !status.LoggedIn {
 			return Result{Detail: "not logged in", Fix: fix}
 		}
@@ -148,7 +148,7 @@ func copilotStatus(ctx context.Context, run Exec, getenv func(string) string) Re
 	return Result{OK: true}
 }
 
-func jsonObject(s string) string {
+func JSONObject(s string) string {
 	start := strings.Index(s, "{")
 	end := strings.LastIndex(s, "}")
 	if start < 0 || end < start {
