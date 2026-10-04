@@ -63,7 +63,7 @@ Branch: main        (optional — defaults to the repo's default branch)
 
 ## Requirements
 
-- One agent CLI, already logged in: [`claude`](https://docs.anthropic.com/en/docs/claude-code), [`codex`](https://github.com/openai/codex), [`copilot`](https://github.com/features/copilot) or [`agy`](https://antigravity.google). Noctra uses its existing login and never stores agent credentials.
+- One agent CLI, already logged in with your subscription or an API key: [`claude`](https://docs.anthropic.com/en/docs/claude-code), [`codex`](https://github.com/openai/codex), [`copilot`](https://github.com/features/copilot) or [`agy`](https://antigravity.google). Noctra runs whichever one you've logged into on your machine and never stores agent credentials. Subscription usage counts against your plan's limits and terms; see [Agent backends](https://getnoctra.dev/docs#backends).
 - `git` and an authenticated [`gh`](https://cli.github.com).
 - A [Linear API key](https://linear.app/settings/api).
 - Optional: a [Gemini API key](https://aistudio.google.com/apikey) for the review gate.
@@ -100,7 +100,9 @@ With the Gemini review gate on, diffs and ticket text are sent to Google's Gemin
 
 ## FAQ
 
-**How much does it cost?** The agent runs on your existing Claude Code, ChatGPT or Copilot subscription (or API key), so Noctra adds no implementation cost of its own. The Gemini review gate costs roughly $0.01–$0.05 per ticket. `MAX_DAILY_TOKENS` / `MAX_DAILY_USD` cap spend per day.
+**How much does it cost?** Noctra adds no cost of its own, but agent usage is billed or metered by your provider according to your plan: a subscription login counts against that plan's usage limits, and an API key is billed per token. The Gemini review gate costs roughly $0.01–$0.05 per ticket. `MAX_DAILY_TOKENS` / `MAX_DAILY_USD` cap usage per day, and are worth setting on a subscription too.
+
+**Can a team share one instance?** Yes. If several people's tickets run through it, prefer an API key or a team or organisation plan over one person's individual subscription.
 
 **Can it handle several repos?** Yes. Give each Linear project a `Repo:` line; tickets for different repos run concurrently up to `MAX_CONCURRENT`.
 

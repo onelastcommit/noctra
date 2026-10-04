@@ -605,7 +605,7 @@ func (w *wizard) chooseEngine(existing string) string {
 	fmt.Println("Coding-agent engine:")
 	fmt.Println("  1) Claude Code        (claude CLI)")
 	fmt.Println("  2) OpenAI Codex       (codex CLI — run `codex login` once on the host)")
-	fmt.Println("  3) GitHub Copilot     (copilot CLI — uses your Copilot subscription via `gh`)")
+	fmt.Println("  3) GitHub Copilot     (copilot CLI, needs a Copilot plan and signs in via `gh`)")
 	fmt.Println("  4) Google Antigravity (agy CLI — run `agy` once on the host to log in)")
 	fallback := "1"
 	switch {
@@ -1097,8 +1097,8 @@ MAIN_BRANCH="%s"
 
 # Coding-agent backend: "claude" (default), "codex", "copilot", or "antigravity".
 # codex requires the OpenAI Codex CLI on PATH + a one-time 'codex login'.
-# copilot requires the GitHub Copilot CLI on PATH + a Copilot subscription via gh.
-# antigravity requires the Antigravity CLI (agy) on PATH + a one-time 'agy' login (Google AI Pro).
+# copilot requires the GitHub Copilot CLI on PATH + a Copilot plan, signed in via gh.
+# antigravity requires the Antigravity CLI (agy) on PATH + a one-time 'agy' login.
 AGENT_BACKEND="%s"
 
 # Curated agent plugins loaded into every run, pinned to exact commits:

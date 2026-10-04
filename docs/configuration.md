@@ -61,6 +61,8 @@ Each plugin is pinned to an exact upstream commit. `noctra setup` downloads your
 | `AGENT_MAX_TOKENS` | `0` (off) | Abort a single Claude run past this many tokens |
 | `MAX_RETRIES` | `3` | Attempts per ticket |
 
+The daily caps are worth setting on a subscription login too: sweeps and Agent Teams can use a plan heavily, and that usage counts against your plan's limits.
+
 ## Quality knobs
 
 | Knob | Off (default) | On |
