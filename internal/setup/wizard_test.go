@@ -342,6 +342,8 @@ func TestChoosePluginPacks_OptionalPacks(t *testing.T) {
 		{"unknown pack re-prompts", "4\nmobile\nsecurity\n", "", "engineering,security"},
 		{"keeps existing on enter", "\n\n", "engineering,frontend,security", "engineering,frontend,security"},
 		{"no plugins skips the optional question", "5\nsecurity\n", "", "none"},
+		{"optional-only selection survives enter", "\n\n", "security", "engineering,security"},
+		{"optional-only selection survives eof", "", "content", "engineering,content"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

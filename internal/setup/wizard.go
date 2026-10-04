@@ -657,12 +657,16 @@ var pluginChoices = []struct {
 }
 
 func (w *wizard) choosePluginPacks(existing string) string {
-	base := w.chooseStackPacks(stackPacks(existing))
+	stack, optional := stackPacks(existing), optionalPacks(existing)
+	if stack == "" && optional != "" {
+		stack = plugins.BasePack
+	}
+	base := w.chooseStackPacks(stack)
 	if base == plugins.NoPacks {
 		return base
 	}
-	if optional := w.chooseOptionalPacks(optionalPacks(existing)); optional != "" {
-		return base + "," + optional
+	if chosen := w.chooseOptionalPacks(optional); chosen != "" {
+		return base + "," + chosen
 	}
 	return base
 }
