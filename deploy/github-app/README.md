@@ -17,7 +17,7 @@ Noctra acts on GitHub as `noctra-agent[bot]`, a public GitHub App owned by the `
 | Enable Device Flow | On |
 | Setup URL | (empty, GitHub disables it when OAuth-on-install is on) |
 | Webhook | Active, `https://auth.getnoctra.dev/webhook`, with a secret |
-| Repository permissions | Contents: Read and write; Pull requests: Read and write; Issues: Read and write; Checks: Read-only; Actions: Read-only; Metadata: Read-only (mandatory) |
+| Repository permissions | Contents: Read and write; Pull requests: Read and write; Issues: Read and write; Checks: Read-only; Commit statuses: Read-only; Actions: Read-only; Metadata: Read-only (mandatory) |
 | Workflows permission | **No access** |
 | Organisation and account permissions | None |
 | Subscribed events | None ticked (see below) |
@@ -62,6 +62,7 @@ Open the file in an editor when you need to paste the value. You will paste it i
 8. **Permissions**, under *Repository permissions*:
    - Actions: Read-only
    - Checks: Read-only
+   - Commit statuses: Read-only
    - Contents: Read and write
    - Issues: Read and write
    - Metadata: Read-only (forced)

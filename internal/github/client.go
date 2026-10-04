@@ -93,26 +93,25 @@ func (c *Client) ListNoctraPRs(ctx context.Context, repoURLs []string) ([]PR, er
 	return out, nil
 }
 
+const (
+	prViewFields      = "url,number,state,headRefOid,comments,reviews"
+	ciRollupField     = "statusCheckRollup"
+	integrationDenied = "Resource not accessible by integration"
+	ciPermissionHint  = "grant the GitHub App Commit statuses: Read-only and accept it on the installation"
+)
+
 func (c *Client) GetPR(ctx context.Context, prURL string) (*Details, error) {
 	ownerRepo, err := OwnerRepoOfPR(prURL)
 	if err != nil {
 		return nil, err
 	}
-	var stderr strings.Builder
-	cmd, err := Command(ctx, ownerRepo, "pr", "view", prURL,
-		"--json", "url,number,state,headRefOid,comments,reviews,statusCheckRollup",
-	)
+	d, err := viewPR(ctx, ownerRepo, prURL, prViewFields+","+ciRollupField)
+	if err != nil && isCIRollupDenied(err) {
+		slog.Warn("github: CI status not readable; watching comments and reviews only", "url", prURL, "hint", ciPermissionHint, "err", err)
+		d, err = viewPR(ctx, ownerRepo, prURL, prViewFields)
+	}
 	if err != nil {
 		return nil, err
-	}
-	cmd.Stderr = &stderr
-	stdout, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("gh pr view %s: %w (%s)", prURL, err, strings.TrimSpace(stderr.String()))
-	}
-	var d Details
-	if err := json.Unmarshal(stdout, &d); err != nil {
-		return nil, fmt.Errorf("decode gh pr view %s: %w", prURL, err)
 	}
 
 	if rc, err := c.listReviewComments(ctx, prURL); err != nil {
@@ -137,7 +136,30 @@ func (c *Client) GetPR(ctx context.Context, prURL string) (*Details, error) {
 			}
 		}
 	}
+	return d, nil
+}
+
+func viewPR(ctx context.Context, ownerRepo, prURL, fields string) (*Details, error) {
+	var stderr strings.Builder
+	cmd, err := Command(ctx, ownerRepo, "pr", "view", prURL, "--json", fields)
+	if err != nil {
+		return nil, err
+	}
+	cmd.Stderr = &stderr
+	stdout, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("gh pr view %s: %w (%s)", prURL, err, strings.TrimSpace(stderr.String()))
+	}
+	var d Details
+	if err := json.Unmarshal(stdout, &d); err != nil {
+		return nil, fmt.Errorf("decode gh pr view %s: %w", prURL, err)
+	}
 	return &d, nil
+}
+
+func isCIRollupDenied(err error) bool {
+	msg := err.Error()
+	return strings.Contains(msg, integrationDenied) && strings.Contains(msg, ciRollupField)
 }
 
 func (c *Client) botAuthorLogins(ctx context.Context, owner, repo string, number int) (map[string]bool, error) {

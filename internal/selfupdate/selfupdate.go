@@ -146,16 +146,16 @@ func Update(ctx context.Context, current string, restart bool) error {
 	}
 
 	fmt.Printf("✓ Updated to %s\n", tag)
-	fmt.Println("  Restart the service to run the new version:  noctra logs  /  systemctl --user restart noctra.service")
-
-	if restart {
-		fmt.Println("⟳ Restarting noctra.service …")
-		rs := exec.CommandContext(ctx, "systemctl", "--user", "restart", "noctra.service")
-		rs.Stdout = os.Stdout
-		rs.Stderr = os.Stderr
-		if err := rs.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "⚠️  could not restart service automatically (%v) — restart it manually\n", err)
-		}
+	if !restart {
+		fmt.Println("  Restart to run the new version:  noctra restart  (or next time: noctra update --restart)")
+		return nil
+	}
+	fmt.Println("⟳ Restarting noctra.service …")
+	rs := exec.CommandContext(ctx, "systemctl", "--user", "restart", "noctra.service")
+	rs.Stdout = os.Stdout
+	rs.Stderr = os.Stderr
+	if err := rs.Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "⚠️  could not restart service automatically (%v) — run: noctra restart\n", err)
 	}
 	return nil
 }
