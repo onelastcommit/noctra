@@ -313,7 +313,7 @@ func (p *Pipeline) process(ctx context.Context, issue source.Ticket) {
 		logger.Info("running gemini review gate")
 		for i := 0; i <= p.cfg.MaxReviewRetries; i++ {
 			reviewAttempts = i + 1
-			diff := boundedReviewDiff(gitDiff(ctx, wt.Path))
+			diff := boundedReviewDiff(gitDiff(ctx, wt.Path, "origin/"+resolved.MainBranch))
 			r, err := p.review.Review(ctx, issue.Title, issue.Description, diff)
 			if err != nil {
 				if errors.Is(err, review.ErrUnavailable) {
@@ -692,17 +692,17 @@ func truncateDiffStat(s string) string {
 		fmt.Sprintf("\n… and %d more changed file(s)", len(lines)-maxLines)
 }
 
-func gitDiff(ctx context.Context, workdir string) string {
-	cmd := exec.CommandContext(ctx, "git", "diff", "--cached")
+func gitDiff(ctx context.Context, workdir, upstream string) string {
+	base := upstream
+	mb := exec.CommandContext(ctx, "git", "merge-base", "HEAD", upstream)
+	mb.Dir = workdir
+	if out, err := mb.Output(); err == nil && len(bytes.TrimSpace(out)) > 0 {
+		base = string(bytes.TrimSpace(out))
+	}
+	cmd := exec.CommandContext(ctx, "git", "diff", base)
 	cmd.Dir = workdir
 	out, _ := cmd.Output()
-	if len(bytes.TrimSpace(out)) > 0 {
-		return string(out)
-	}
-	cmd2 := exec.CommandContext(ctx, "git", "diff", "HEAD")
-	cmd2.Dir = workdir
-	out2, _ := cmd2.Output()
-	return string(out2)
+	return string(out)
 }
 
 func boundedReviewDiff(diff string) string {

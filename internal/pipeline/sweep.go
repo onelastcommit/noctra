@@ -570,7 +570,7 @@ func (p *Pipeline) processSweepTask(ctx context.Context, job sweep.Job, identifi
 		logger.Info("running gemini review gate")
 		for i := 0; i <= p.cfg.MaxReviewRetries; i++ {
 			reviewAttempts = i + 1
-			diff := boundedReviewDiff(gitDiff(ctx, wt.Path))
+			diff := boundedReviewDiff(gitDiff(ctx, wt.Path, "origin/"+job.MainBranch))
 			r, err := p.review.Review(ctx, job.Task.Name, job.Task.Description, diff)
 			if err != nil {
 				if errors.Is(err, review.ErrUnavailable) {
