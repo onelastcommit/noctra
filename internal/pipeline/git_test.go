@@ -114,3 +114,35 @@ func TestBoundedReviewDiffPreservesUTF8(t *testing.T) {
 		t.Fatal("bounded diff should not split UTF-8 runes")
 	}
 }
+
+func TestGitDiffIncludesCommittedAndUncommittedWork(t *testing.T) {
+	dir := gitRepoWithUpstream(t)
+	ctx := context.Background()
+	git := func(args ...string) {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+
+	if got := gitDiff(ctx, dir, "origin/main"); strings.TrimSpace(got) != "" {
+		t.Fatalf("level with upstream: diff = %q, want empty", got)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "committed.txt"), []byte("c"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	git("add", "-A")
+	git("commit", "-m", "agent-commit", "--quiet")
+	if err := os.WriteFile(filepath.Join(dir, "staged.txt"), []byte("s"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	git("add", "-A")
+
+	got := gitDiff(ctx, dir, "origin/main")
+	for _, name := range []string{"committed.txt", "staged.txt"} {
+		if !strings.Contains(got, name) {
+			t.Fatalf("diff missing %s:\n%s", name, got)
+		}
+	}
+}
