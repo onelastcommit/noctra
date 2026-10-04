@@ -220,7 +220,7 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	p.mu.Unlock()
 	p.publishDashboardChange()
 
-	wt, err := repo.ResumeWorktree(ctx, p.cfg.WorktreeBase, identifier, resolved.Path)
+	wt, err := repo.ResumeWorktreeWithBranch(ctx, p.cfg.WorktreeBase, identifier, resolved.Path, ch.PR.HeadRefName)
 	if err != nil {
 		logger.Error("resume worktree failed", "err", err)
 		p.recordIteration(ctx, ch, identifier, ch.PR.Number, "")
@@ -322,6 +322,7 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	}
 
 	if errors.Is(runErr, agent.ErrTimedOut) {
+		p.chargeUsage(usage, "iterate", identifier, ch.PR.URL, backend)
 		logger.Warn("iteration timed out — will retry next poll", "timeout", p.cfg.AgentTimeout)
 		return
 	}

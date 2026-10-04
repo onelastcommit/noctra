@@ -140,6 +140,78 @@ func TestResumeWorktree_PicksUpExistingBranchCommits(t *testing.T) {
 	CleanupWorktree(ctx, repo, base, "ENG-300")
 }
 
+func TestResumeWorktreeWithBranch_UsesGivenBranchNotIdentifier(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	repo := t.TempDir()
+	mustGit := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = repo
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, string(out))
+		}
+	}
+
+	mustGit("init", "-b", "main", "--quiet")
+	mustGit("config", "user.email", "t@t")
+	mustGit("config", "user.name", "T")
+	mustGit("config", "commit.gpgsign", "false")
+	mustGit("config", "receive.denyCurrentBranch", "ignore")
+	mustGit("remote", "add", "origin", repo)
+
+	if err := os.WriteFile(filepath.Join(repo, "README.md"), []byte("init"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mustGit("add", "-A")
+	mustGit("commit", "-m", "init", "--quiet")
+	mustGit("fetch", "origin", "--quiet")
+
+	base := t.TempDir()
+	ctx := context.Background()
+	identifier := "SWEEP-ACME-WIDGETS-BUG-SCAN"
+	branch := "noctra/sweep-bug-scan"
+
+	wt1, err := CreateWorktreeWithBranch(ctx, base, identifier, repo, "main", branch)
+	if err != nil {
+		t.Fatalf("CreateWorktreeWithBranch: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(wt1.Path, "sweep.txt"), []byte("fix"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	runInWt := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = wt1.Path
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v in worktree: %v\n%s", args, err, string(out))
+		}
+	}
+	runInWt("add", "-A")
+	runInWt("commit", "-m", "sweep", "--quiet")
+	runInWt("push", "-u", "origin", branch, "--quiet")
+	CleanupWorktree(ctx, repo, base, identifier)
+
+	if _, err := ResumeWorktree(ctx, base, identifier, repo); err == nil {
+		t.Fatal("ResumeWorktree derives the branch from the identifier and should not find the sweep branch")
+	}
+
+	wt2, err := ResumeWorktreeWithBranch(ctx, base, identifier, repo, branch)
+	if err != nil {
+		t.Fatalf("ResumeWorktreeWithBranch: %v", err)
+	}
+	if wt2.Branch != branch {
+		t.Errorf("branch: got %q, want %q", wt2.Branch, branch)
+	}
+	if _, err := os.Stat(filepath.Join(wt2.Path, "sweep.txt")); err != nil {
+		t.Errorf("resumed worktree is missing the sweep commit: %v", err)
+	}
+
+	CleanupWorktree(ctx, repo, base, identifier)
+}
+
 func TestResumeWorktree_OverStaleWorktree(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
