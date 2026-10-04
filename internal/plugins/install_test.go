@@ -338,14 +338,18 @@ func TestInstall_GivesUpWhenTheFetchStalls(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer listener.Close()
+	defer func() { _ = listener.Close() }()
 	go func() {
+		var held []net.Conn
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
+				for _, c := range held {
+					_ = c.Close()
+				}
 				return
 			}
-			defer conn.Close()
+			held = append(held, conn)
 		}
 	}()
 
