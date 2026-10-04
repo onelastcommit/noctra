@@ -21,6 +21,7 @@ type check struct {
 	ok     bool
 	detail string
 	hint   string
+	note   string
 }
 
 func gather(scriptDir string) []check {
@@ -51,7 +52,11 @@ func gather(scriptDir string) []check {
 				})
 			}
 		}
-		checks = append(checks, checkCLI(cli))
+		cliCheck := checkCLI(cli)
+		checks = append(checks, cliCheck)
+		if loadErr == nil && cli == cfg.AgentCLI() && cliCheck.ok {
+			checks = append(checks, checkAgentAuth(defaultAuthProbe(), cfg.AgentBackend))
+		}
 	}
 
 	if loadErr == nil {
@@ -117,6 +122,9 @@ func Run(scriptDir string) error {
 		if c.ok {
 			passed++
 			fmt.Printf("  ✓ %-16s %s\n", c.name, c.detail)
+			if c.note != "" {
+				fmt.Printf("    %-16s %s\n", "", c.note)
+			}
 		} else {
 			failed++
 			fmt.Printf("  ✗ %-16s %s\n", c.name, c.detail)
@@ -140,6 +148,7 @@ type jsonCheck struct {
 	OK     bool   `json:"ok"`
 	Detail string `json:"detail"`
 	Hint   string `json:"hint,omitempty"`
+	Note   string `json:"note,omitempty"`
 }
 
 func RunJSON(scriptDir string, w io.Writer) error {
@@ -151,7 +160,7 @@ func RunJSON(scriptDir string, w io.Writer) error {
 		if !c.ok {
 			failed++
 		}
-		out = append(out, jsonCheck{Name: c.name, OK: c.ok, Detail: c.detail, Hint: c.hint})
+		out = append(out, jsonCheck{Name: c.name, OK: c.ok, Detail: c.detail, Hint: c.hint, Note: c.note})
 	}
 
 	enc := json.NewEncoder(w)
@@ -174,7 +183,7 @@ func checkCLI(name string) check {
 			"claude":  "Install Claude Code: https://docs.anthropic.com/en/docs/claude-code",
 			"codex":   "Install Codex CLI: npm i -g @openai/codex, then run `codex login`",
 			"copilot": "Install Copilot CLI: npm i -g @github/copilot (authenticates via `gh auth login` / GH_TOKEN)",
-			"agy":     "Install Antigravity CLI (`agy`), then run `agy` once to log in (Google AI Pro): https://antigravity.google",
+			"agy":     "Install Antigravity CLI (`agy`), then run `agy` once to log in: https://antigravity.google",
 		}
 		return check{
 			name:   name,
