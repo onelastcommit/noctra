@@ -142,6 +142,7 @@ func TestChooseGeminiModeEOFPreservesCLI(t *testing.T) {
 }
 
 func TestWriteEnvFile_OnlyWritesNonDefaults(t *testing.T) {
+	clearAmbientDefaults(t)
 	path := filepath.Join(t.TempDir(), ".env")
 	if err := writeEnvFile(path, envValues{
 		linearKey:    "lin_xyz",
@@ -182,6 +183,7 @@ func TestWriteEnvFile_OnlyWritesNonDefaults(t *testing.T) {
 }
 
 func TestMergeEnvFile_RemovesLinesSetBackToDefault(t *testing.T) {
+	clearAmbientDefaults(t)
 	path := filepath.Join(t.TempDir(), ".env")
 	writeTestFile(t, path, `LINEAR_API_KEY="lin_key"
 MAX_PR_ITERATIONS="5"
@@ -387,5 +389,61 @@ func TestChoosePluginPacks_OptionalPacks(t *testing.T) {
 				t.Errorf("got %q, want %q", got, c.want)
 			}
 		})
+	}
+}
+
+func clearAmbientDefaults(t *testing.T) {
+	t.Helper()
+	for key := range config.EnvDefaults() {
+		t.Setenv(key, "")
+	}
+}
+
+func TestMergeEnvFile_KeepsADefaultThatOverridesTheEnvironment(t *testing.T) {
+	clearAmbientDefaults(t)
+	t.Setenv("AGENT_BACKEND", "codex")
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".env")
+	writeTestFile(t, path, "LINEAR_API_KEY=\"lin_key\"\nAGENT_BACKEND=\"claude\"\n")
+
+	if err := mergeEnvFile(path, envValues{linearKey: "lin_key", agentBackend: "claude", triggerMode: "state", trigger: "Next"}); err != nil {
+		t.Fatalf("mergeEnvFile: %v", err)
+	}
+
+	got, err := config.LoadEnvFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got["AGENT_BACKEND"] != "claude" {
+		t.Fatalf("the explicit default must stay to override the environment, got %v", got)
+	}
+	cfg, err := config.Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.AgentBackend != "claude" {
+		t.Fatalf("Noctra would run %q, want the claude chosen in setup", cfg.AgentBackend)
+	}
+}
+
+func TestWriteEnvFile_WritesADefaultThatOverridesTheEnvironment(t *testing.T) {
+	clearAmbientDefaults(t)
+	t.Setenv("AGENT_BACKEND", "codex")
+	t.Setenv("MAX_CONCURRENT", "3")
+	path := filepath.Join(t.TempDir(), ".env")
+
+	if err := writeEnvFile(path, envValues{linearKey: "lin_key", agentBackend: "claude", concurrency: "3", triggerMode: "state", trigger: "Next"}); err != nil {
+		t.Fatalf("writeEnvFile: %v", err)
+	}
+
+	got, err := config.LoadEnvFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got["AGENT_BACKEND"] != "claude" {
+		t.Errorf("AGENT_BACKEND should be written to override the environment's codex, got %v", got)
+	}
+	if _, ok := got["MAX_CONCURRENT"]; ok {
+		t.Errorf("MAX_CONCURRENT matches both the default and the environment, so it should be left out, got %v", got)
 	}
 }

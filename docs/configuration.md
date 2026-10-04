@@ -1,13 +1,13 @@
 # Configuring Noctra
 
-`noctra setup` writes `.env` interactively. It saves only the settings that differ from the defaults, and removes a line when you set it back to its default. Re-running it is safe: it merges into the existing file and keeps hand-added keys. Every variable, with its default, is documented in [`.env.example`](../.env.example); this page covers what each feature does.
+`noctra setup` writes `.env` interactively. It saves only the settings that differ from the defaults, and removes a line when you set it back to its default. The one exception: if your shell exports a different value for that setting, setup keeps the line so your choice still wins. Re-running it is safe: it merges into the existing file and keeps hand-added keys. Every variable, with its default, is documented in [`.env.example`](../.env.example); this page covers what each feature does.
 
 Config lives in `~/.noctra/` (`.env`, `logs/`, `state.db`). If the current directory contains `.env`, `.env.example` or `go.mod`, that directory is used instead.
 
 ```bash
 noctra config path              # resolved .env path
 noctra config edit              # open it in $EDITOR
-noctra config get KEY           # falls back to the default when unset
+noctra config get KEY           # falls back to the default when unset (except paths, which depend on your machine)
 noctra config set KEY=VALUE     # atomic write, keeps comments and other keys
 ```
 

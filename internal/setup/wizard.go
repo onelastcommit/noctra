@@ -1066,7 +1066,9 @@ func splitDefaults(values map[string]string) (updates map[string]string, removal
 	defaults := config.EnvDefaults()
 	updates = make(map[string]string, len(values))
 	for key, val := range values {
-		if def, ok := defaults[key]; val == "" || (ok && val == def) {
+		def, ok := defaults[key]
+		isDefault := val == "" || (ok && val == def)
+		if isDefault && !overridesEnvironment(key, val) {
 			removals = append(removals, key)
 			continue
 		}
@@ -1074,6 +1076,11 @@ func splitDefaults(values map[string]string) (updates map[string]string, removal
 	}
 	sort.Strings(removals)
 	return updates, removals
+}
+
+func overridesEnvironment(key, val string) bool {
+	ambient := os.Getenv(key)
+	return val != "" && ambient != "" && ambient != val
 }
 
 func writeEnvFile(path string, v envValues) error {
