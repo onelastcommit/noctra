@@ -67,3 +67,25 @@ func TestInstallPluginSet_InstallsAndReportsEach(t *testing.T) {
 		}
 	}
 }
+
+func TestInstallPluginSet_LeavesOutSkillsWithMissingDependencies(t *testing.T) {
+	src, commit := localPluginRepo(t)
+	root := t.TempDir()
+	gated := plugins.Plugin{Name: "gated", Repo: "file://" + src, Commit: commit, Skills: []plugins.Skill{{
+		Path:     "skills/tdd",
+		Requires: []plugins.Requirement{{Name: "Python Playwright", Command: []string{"false"}, Hint: "pip install playwright"}},
+	}}}
+
+	var out bytes.Buffer
+	installed, failed := installPluginSet(context.Background(), &out, root, []plugins.Plugin{gated})
+
+	if installed != 0 || failed != 0 {
+		t.Fatalf("installed=%d failed=%d; a missing dependency is a warning, not a failure\n%s", installed, failed, out.String())
+	}
+	if plugins.IsInstalled(root, gated) {
+		t.Fatal("gated plugin should not be installed")
+	}
+	if !strings.Contains(out.String(), "Leaving out tdd: needs Python Playwright. pip install playwright") {
+		t.Errorf("missing warning:\n%s", out.String())
+	}
+}

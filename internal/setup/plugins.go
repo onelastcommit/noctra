@@ -33,7 +33,12 @@ func setUpPlugins(scriptDir string) {
 }
 
 func installPluginSet(ctx context.Context, out io.Writer, root string, wanted []plugins.Plugin) (installed, failed int) {
-	fmt.Fprintf(out, "\n─── Agent plugins ───\nSetting up %d plugins in %s\n", len(wanted), root)
+	fmt.Fprintf(out, "\n─── Agent plugins ───\n")
+	wanted, unmet := plugins.CheckRequirements(ctx, wanted)
+	for _, u := range unmet {
+		fmt.Fprintf(out, "  ⚠️  Leaving out %s: needs %s. %s, then re-run setup or restart Noctra.\n", u.Skill, u.Requirement.Name, u.Requirement.Hint)
+	}
+	fmt.Fprintf(out, "Setting up %d plugins in %s\n", len(wanted), root)
 	skills := 0
 	for _, p := range wanted {
 		inst, err := plugins.Install(ctx, root, p)
@@ -50,7 +55,7 @@ func installPluginSet(ctx context.Context, out io.Writer, root string, wanted []
 		}
 		fmt.Fprintf(out, "  ✓ %-18s %d skills%s\n", p.Name, len(inst.Skills), label)
 	}
-	fmt.Fprintf(out, "✅ %d plugins ready, %d skills — every agent run picks them up.\n", installed, skills)
+	fmt.Fprintf(out, "✅ %d plugins ready, %d skills. Every agent run picks them up.\n", installed, skills)
 	if failed > 0 {
 		fmt.Fprintf(out, "   %d failed; Noctra retries them on every start and runs without them meanwhile.\n", failed)
 	}

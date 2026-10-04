@@ -45,6 +45,7 @@ type Pipeline struct {
 
 	plugins        []plugins.Installed
 	pluginFailures int
+	pluginSkipped  []string
 
 	labelID string
 
@@ -779,7 +780,7 @@ func (p *Pipeline) banner() {
 		fmt.Printf("   Watching:       %q column\n", p.cfg.TriggerState)
 	}
 	fmt.Printf("   Agent:          %s\n", agentMode)
-	fmt.Printf("   Plugins:        %s\n", pluginSummary(p.cfg.PluginPacks, p.plugins, p.pluginFailures))
+	fmt.Printf("   Plugins:        %s\n", pluginSummary(p.cfg.PluginPacks, p.plugins, p.pluginFailures, p.pluginSkipped))
 	fmt.Printf("   Language:       %s\n", englishLabel(p.cfg.EnglishVariant))
 	fmt.Printf("   Review:         %s\n", reviewMode)
 	fmt.Printf("   Auto-iterate:   %s\n", autoIterMode)

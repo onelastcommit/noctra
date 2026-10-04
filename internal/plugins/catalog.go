@@ -9,10 +9,11 @@ import (
 )
 
 type Skill struct {
-	Path    string
-	Name    string
-	Only    []string
-	Exclude []string
+	Path     string
+	Name     string
+	Only     []string
+	Exclude  []string
+	Requires []Requirement
 }
 
 func (s Skill) DirName() string {

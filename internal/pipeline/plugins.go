@@ -18,6 +18,11 @@ func (p *Pipeline) installPlugins(ctx context.Context) {
 	if len(wanted) == 0 {
 		return
 	}
+	wanted, unmet := plugins.CheckRequirements(ctx, wanted)
+	for _, u := range unmet {
+		slog.Warn("agent skill left out; its runtime dependency is missing", "skill", u.Plugin+"/"+u.Skill, "needs", u.Requirement.Name, "err", u.Err, "fix", u.Requirement.Hint)
+	}
+	p.pluginSkipped = plugins.SkillNames(unmet)
 	installed, errs := plugins.InstallAll(ctx, p.cfg.PluginsDir, wanted)
 	for _, err := range errs {
 		slog.Warn("agent plugin unavailable; runs continue without it", "err", err)
@@ -34,8 +39,8 @@ func (p *Pipeline) pluginDirs() []string {
 	return dirs
 }
 
-func pluginSummary(packs []string, installed []plugins.Installed, failures int) string {
-	if !plugins.Enabled(packs) && len(installed) == 0 && failures == 0 {
+func pluginSummary(packs []string, installed []plugins.Installed, failures int, skipped []string) string {
+	if !plugins.Enabled(packs) && len(installed) == 0 && failures == 0 && len(skipped) == 0 {
 		return "Disabled"
 	}
 	skills := 0
@@ -53,8 +58,11 @@ func pluginSummary(packs []string, installed []plugins.Installed, failures int) 
 	if len(unvetted) > 0 {
 		summary += " + unvetted: " + strings.Join(unvetted, ", ")
 	}
+	if len(skipped) > 0 {
+		summary += "; left out for missing dependencies: " + strings.Join(skipped, ", ")
+	}
 	if failures > 0 {
-		summary += fmt.Sprintf(" — %d failed to fetch", failures)
+		summary += fmt.Sprintf("; %d failed to fetch", failures)
 	}
 	return summary
 }

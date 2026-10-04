@@ -300,6 +300,18 @@ func checkPlugins(cfg *config.Config) check {
 	if len(wanted) == 0 {
 		return check{name: "agent plugins", ok: true, detail: "disabled (set AGENT_PLUGIN_PACKS or run `noctra setup`)"}
 	}
+	wanted, unmet := plugins.CheckRequirements(context.Background(), wanted)
+	if len(unmet) > 0 {
+		var hints []string
+		for _, u := range unmet {
+			hints = append(hints, fmt.Sprintf("%s: %s", u.Skill, u.Requirement.Hint))
+		}
+		return check{
+			name:   "agent plugins",
+			ok:     true,
+			detail: fmt.Sprintf("%s left out for a missing dependency; runs continue without them. Fix: %s", strings.Join(plugins.SkillNames(unmet), ", "), strings.Join(hints, "; ")),
+		}
+	}
 	var missing []string
 	for _, p := range wanted {
 		if !plugins.IsInstalled(cfg.PluginsDir, p) {
