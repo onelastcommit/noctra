@@ -124,6 +124,23 @@ func EnvDefaults() map[string]string {
 		"SWEEP_ENABLED":         "false",
 		"SWEEP_INTERVAL":        strconv.Itoa(int(DefaultSweepInterval / time.Second)),
 		"SWEEP_MAX_TASKS":       strconv.Itoa(DefaultSweepMaxTasks),
+		"SWEEP_TIMEOUT_MINUTES": strconv.Itoa(int(DefaultSweepTimeout / time.Minute)),
+		"TICKET_SOURCES":        DefaultTicketSources,
+		"DONE_STATE":            DefaultDoneState,
+		"JIRA_IN_REVIEW_STATUS": DefaultJiraInReviewStatus,
+		"ENGLISH_VARIANT":       DefaultEnglishVariant,
+		"AUTO_RELEASE_LABEL":    "false",
+		"DEFAULT_RELEASE_BUMP":  DefaultReleaseBump,
+		"MAX_DAILY_TOKENS":      "0",
+		"MAX_DAILY_USD":         "0",
+		"AGENT_MAX_TOKENS":      "0",
+		"RATE_LIMIT_STRATEGY":   DefaultRateLimitStrategy,
+		"RATE_LIMIT_COOLDOWN":   strconv.Itoa(int(DefaultRateLimitCooldown / time.Second)),
+		"AUTH_CHECK_SCHEDULE":   DefaultAuthCheckSchedule,
+		"PLAN_CONFIRM":          "false",
+		"PLAN_CONFIRM_LABEL":    DefaultPlanConfirmLabel,
+		"GITHUB_AUTH_MODE":      "auto",
+		"NOCTRA_AUTH_URL":       DefaultAuthServiceURL,
 	}
 }
 
