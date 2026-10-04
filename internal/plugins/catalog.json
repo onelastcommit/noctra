@@ -1,0 +1,269 @@
+{
+  "plugins": {
+    "agent-skills": {
+      "repo": "addyosmani/agent-skills",
+      "commit": "1401c8b8030e023baeebb31781a6653fe8e93026",
+      "licence": "MIT"
+    },
+    "anthropic-skills": {
+      "repo": "anthropics/skills",
+      "commit": "8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4",
+      "licence": "Apache-2.0"
+    },
+    "gsap-skills": {
+      "repo": "greensock/gsap-skills",
+      "commit": "aed9cfd3277740755f6bfc1155c7aa645403b760",
+      "licence": "MIT"
+    },
+    "humanizer": {
+      "repo": "blader/humanizer",
+      "commit": "225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8",
+      "licence": "MIT"
+    },
+    "impeccable": {
+      "repo": "pbakaus/impeccable",
+      "commit": "e103efe779e2dd01274dabae83531fef00bf2563",
+      "licence": "Apache-2.0"
+    },
+    "marketingskills": {
+      "repo": "coreyhaines31/marketingskills",
+      "commit": "dda3841f0b294e01e93b1541486beefbfab0915e",
+      "licence": "MIT"
+    },
+    "mattpocock-skills": {
+      "repo": "mattpocock/skills",
+      "commit": "d81f3a183412e71a5b1e84ca21bc1a35eea03a60",
+      "licence": "MIT"
+    },
+    "ponytail": {
+      "repo": "DietrichGebert/ponytail",
+      "commit": "c982cd411abb53323c4baa1baa3c2f020b8d0b08",
+      "licence": "MIT"
+    },
+    "superpowers": {
+      "repo": "obra/superpowers",
+      "commit": "8ca22dba9a94f28898bbce59f2537ff4d87c747d",
+      "licence": "MIT"
+    },
+    "taste-skill": {
+      "repo": "Leonxlnx/taste-skill",
+      "commit": "ce26fc25c0e5e8cab638f883de62d9a86ee5e45b",
+      "licence": "MIT"
+    },
+    "trailofbits-skills": {
+      "repo": "trailofbits/skills",
+      "commit": "82fe8226252622fa807643bdca1710901198553a",
+      "licence": "CC-BY-SA-4.0"
+    },
+    "vercel-agent-skills": {
+      "repo": "vercel-labs/agent-skills",
+      "commit": "063bee94c3f4df8453406c830b0a7df0f2860278",
+      "licence": "MIT"
+    }
+  },
+  "requirements": {
+    "playwright": {
+      "name": "Python Playwright with Chromium",
+      "command": [
+        "python3",
+        "-c",
+        "from playwright.sync_api import sync_playwright\nwith sync_playwright() as p:\n    p.chromium.launch().close()"
+      ],
+      "hint": "install it with `pip install playwright \u0026\u0026 python3 -m playwright install --with-deps chromium`"
+    }
+  },
+  "packs": [
+    {
+      "name": "engineering",
+      "description": "test-first work, root-cause debugging, verification before done, minimal diffs",
+      "include": [
+        {
+          "plugin": "superpowers",
+          "skills": [
+            {
+              "path": "skills/test-driven-development"
+            },
+            {
+              "path": "skills/systematic-debugging",
+              "exclude": [
+                "CREATION-LOG.md",
+                "test-academic.md",
+                "test-pressure-1.md",
+                "test-pressure-2.md",
+                "test-pressure-3.md"
+              ]
+            },
+            {
+              "path": "skills/verification-before-completion"
+            },
+            {
+              "path": "skills/receiving-code-review"
+            }
+          ]
+        },
+        {
+          "plugin": "agent-skills",
+          "skills": [
+            {
+              "path": "skills/code-simplification"
+            }
+          ]
+        },
+        {
+          "plugin": "ponytail",
+          "skills": [
+            {
+              "path": "skills/ponytail"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "backend",
+      "description": "API and interface design, deep modules",
+      "include": [
+        {
+          "plugin": "agent-skills",
+          "skills": [
+            {
+              "path": "skills/api-and-interface-design"
+            }
+          ]
+        },
+        {
+          "plugin": "mattpocock-skills",
+          "skills": [
+            {
+              "path": "skills/engineering/codebase-design"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "frontend",
+      "description": "design direction and craft, anti-template UI, GSAP motion, React performance, UI checks in a real browser",
+      "include": [
+        {
+          "plugin": "impeccable",
+          "skills": [
+            {
+              "path": "plugin/skills/impeccable",
+              "exclude": [
+                "scripts"
+              ]
+            }
+          ]
+        },
+        {
+          "plugin": "taste-skill",
+          "skills": [
+            {
+              "path": "skills/taste-skill"
+            }
+          ]
+        },
+        {
+          "plugin": "gsap-skills",
+          "skills": [
+            {
+              "path": "skills/gsap-core"
+            },
+            {
+              "path": "skills/gsap-timeline"
+            },
+            {
+              "path": "skills/gsap-scrolltrigger"
+            },
+            {
+              "path": "skills/gsap-react"
+            },
+            {
+              "path": "skills/gsap-performance"
+            }
+          ]
+        },
+        {
+          "plugin": "anthropic-skills",
+          "skills": [
+            {
+              "path": "skills/webapp-testing",
+              "requires": [
+                "playwright"
+              ]
+            }
+          ]
+        },
+        {
+          "plugin": "vercel-agent-skills",
+          "skills": [
+            {
+              "path": "skills/react-best-practices",
+              "exclude": [
+                "AGENTS.md",
+                "README.md"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "security",
+      "description": "security review of the diff, dangerous APIs and unsafe defaults",
+      "optional": true,
+      "include": [
+        {
+          "plugin": "trailofbits-skills",
+          "skills": [
+            {
+              "path": "plugins/differential-review/skills/differential-review",
+              "exclude": [
+                "agents",
+                "assets"
+              ]
+            },
+            {
+              "path": "plugins/sharp-edges/skills/sharp-edges",
+              "exclude": [
+                "agents",
+                "assets"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "content",
+      "description": "user-facing copy that converts and reads like a person wrote it",
+      "optional": true,
+      "include": [
+        {
+          "plugin": "marketingskills",
+          "skills": [
+            {
+              "path": "skills/copywriting",
+              "exclude": [
+                "evals"
+              ]
+            }
+          ]
+        },
+        {
+          "plugin": "humanizer",
+          "skills": [
+            {
+              "path": ".",
+              "name": "humanizer",
+              "only": [
+                "SKILL.md"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
