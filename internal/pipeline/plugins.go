@@ -18,6 +18,8 @@ func (p *Pipeline) installPlugins(ctx context.Context) {
 	if len(wanted) == 0 {
 		return
 	}
+	ctx, cancel := context.WithTimeout(ctx, plugins.SetupTimeout)
+	defer cancel()
 	wanted, unmet := plugins.CheckRequirements(ctx, wanted)
 	for _, u := range unmet {
 		slog.Warn("agent skill left out; its runtime dependency is missing", "skill", u.Plugin+"/"+u.Skill, "needs", u.Requirement.Name, "err", u.Err, "fix", u.Requirement.Hint)

@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"time"
 )
 
 type Installed struct {
@@ -29,6 +30,8 @@ const (
 	skillEntry   = "SKILL.md"
 	manifestName = "noctra-"
 )
+
+const SetupTimeout = 3 * time.Minute
 
 var licenceFiles = []string{"LICENSE", "LICENSE.md", "LICENSE.txt", "LICENCE", "LICENCE.md"}
 
@@ -133,10 +136,18 @@ func fetchCommit(ctx context.Context, dir string, p Plugin) error {
 	return nil
 }
 
+const (
+	gitWaitDelay     = 5 * time.Second
+	gitStallBytesSec = "1000"
+	gitStallSeconds  = "30"
+)
+
 func git(ctx context.Context, dir string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", args...)
+	full := append([]string{"-c", "http.lowSpeedLimit=" + gitStallBytesSec, "-c", "http.lowSpeedTime=" + gitStallSeconds}, args...)
+	cmd := exec.CommandContext(ctx, "git", full...)
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0")
+	cmd.WaitDelay = gitWaitDelay
 	out, err := cmd.CombinedOutput()
 	return string(out), err
 }

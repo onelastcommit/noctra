@@ -72,6 +72,7 @@ func runRequirement(ctx context.Context, r Requirement) error {
 	ctx, cancel := context.WithTimeout(ctx, requirementTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, r.Command[0], r.Command[1:]...)
+	cmd.WaitDelay = gitWaitDelay
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		return nil

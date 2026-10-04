@@ -3,12 +3,14 @@ package plugins
 import (
 	"context"
 	"encoding/json"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func requireGit(t *testing.T) {
@@ -287,5 +289,36 @@ func TestSkillDirName(t *testing.T) {
 	}
 	if got := (Skill{Path: ".", Name: "humanizer"}).DirName(); got != "humanizer" {
 		t.Errorf("got %q", got)
+	}
+}
+
+func TestInstall_GivesUpWhenTheFetchStalls(t *testing.T) {
+	requireGit(t)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer listener.Close()
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				return
+			}
+			defer conn.Close()
+		}
+	}()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	p := Plugin{Name: "stalled", Repo: "http://" + listener.Addr().String() + "/x.git", Commit: strings.Repeat("a", 40), Skills: []Skill{{Path: "skills/tdd"}}}
+
+	start := time.Now()
+	_, err = Install(ctx, t.TempDir(), p)
+	if err == nil {
+		t.Fatal("want an error from a stalled fetch")
+	}
+	if elapsed := time.Since(start); elapsed > 10*time.Second {
+		t.Fatalf("Install ignored its deadline and ran for %s", elapsed)
 	}
 }

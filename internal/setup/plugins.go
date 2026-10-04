@@ -5,13 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"github.com/onelastcommit/noctra/internal/config"
 	"github.com/onelastcommit/noctra/internal/plugins"
 )
-
-const pluginSetupTimeout = 3 * time.Minute
 
 func setUpPlugins(scriptDir string) {
 	cfg, err := config.Load(scriptDir)
@@ -27,7 +24,7 @@ func setUpPlugins(scriptDir string) {
 	if len(wanted) == 0 {
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), pluginSetupTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), plugins.SetupTimeout)
 	defer cancel()
 	installPluginSet(ctx, os.Stdout, cfg.PluginsDir, wanted)
 }
