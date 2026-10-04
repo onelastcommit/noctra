@@ -32,6 +32,7 @@ The model a run used is read back per backend for PR footers; the [`naming`](../
 
 A new backend must do one of the two; if it reads neither, its runs silently get no skills. Catalogue rules:
 
+- The catalogue is data, not code: `internal/plugins/catalog.json`, embedded with `//go:embed`. Each plugin's repo, commit and licence appear once in its `plugins` map; packs refer to plugins by name. The private `onelastcommit/supervisor` repo bumps those commits with a reviewed PR, so keep that shape stable.
 - Pin a full SHA and list skills explicitly. A skill at a repo's root sets `Name` and `Only` (humanizer).
 - Take only self-contained skills: no `../` references, no `${CLAUDE_PLUGIN_ROOT}`, no instructions fetched from a moving branch at run time (Vercel's Web Design Guidelines was deferred for this).
 - Leave out anything that waits for a human or downloads code at run time. impeccable ships without its `scripts/` launcher; its skill falls back to reading project files.
