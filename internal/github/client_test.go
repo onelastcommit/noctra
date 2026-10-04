@@ -545,3 +545,49 @@ func TestReplyToThreadsByComment_UntouchedThreadGetsNothing(t *testing.T) {
 		t.Errorf("expected GraphQL thread fetch, got: %s", calls[0])
 	}
 }
+
+func TestGetPR_FallsBackWhenCIStatusIsNotReadable(t *testing.T) {
+	dir := t.TempDir()
+	gh := filepath.Join(dir, "gh")
+	if err := os.WriteFile(gh, []byte(`#!/bin/sh
+case "$*" in
+  *"pr view"*statusCheckRollup*)
+    echo "GraphQL: Resource not accessible by integration (repository.pullRequest.statusCheckRollup.nodes.0.commit.statusCheckRollup.contexts.nodes.0)" >&2
+    exit 1
+    ;;
+  *"pr view"*)
+    echo '{"url":"https://github.com/me/repo/pull/7","number":7,"state":"OPEN","headRefOid":"abc","comments":[{"id":"c1","author":{"login":"human"},"body":"please fix","createdAt":"2026-10-04T10:59:19Z"}],"reviews":[]}'
+    ;;
+  *)
+    echo '[]'
+    ;;
+esac
+`), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	d, err := New().GetPR(context.Background(), "https://github.com/me/repo/pull/7")
+	if err != nil {
+		t.Fatalf("GetPR should fall back to comments and reviews: %v", err)
+	}
+	if len(d.Comments) != 1 || d.Comments[0].Body != "please fix" {
+		t.Errorf("comments not read on fallback: %+v", d.Comments)
+	}
+	if len(d.StatusCheckRollup) != 0 {
+		t.Errorf("rollup should be empty on fallback: %+v", d.StatusCheckRollup)
+	}
+}
+
+func TestGetPR_OtherErrorsStillFail(t *testing.T) {
+	dir := t.TempDir()
+	gh := filepath.Join(dir, "gh")
+	if err := os.WriteFile(gh, []byte("#!/bin/sh\necho 'GraphQL: Could not resolve to a PullRequest' >&2\nexit 1\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+
+	if _, err := New().GetPR(context.Background(), "https://github.com/me/repo/pull/7"); err == nil {
+		t.Error("GetPR should fail when gh fails for a reason other than CI access")
+	}
+}

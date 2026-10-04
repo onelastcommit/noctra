@@ -68,6 +68,8 @@ which produces an arm64 binary named `noctra-pi`.
 
 On a host running Noctra as a `systemd --user` service, `make update` pulls `main`, builds to a side file, **atomically swaps** it into place (safe while the old process is still executing) and restarts `noctra.service`. A failed build leaves the previous binary intact. `make start` / `stop` / `restart` / `status` / `logs` wrap `systemctl --user` and `journalctl --user-unit=noctra.service -f`.
 
+On an installed host (release binary, no checkout), operate the service through the CLI: `noctra update` (add `--restart` to restart afterwards), `noctra start` / `stop` / `restart` / `status` and `noctra logs`. Recommend these over raw `systemctl --user` commands, which they wrap.
+
 The startup banner (`pipeline.banner`) prints the resolved runtime config — repos, trigger, agent backend (`p.agent.Label()` + CLI), review gate, auto-iterate, notifications, GitHub identity — so a restart's `make logs` shows exactly what is live. Keep new operationally significant config visible there.
 
 ## Docker Image
