@@ -46,8 +46,16 @@ func LoadEnvFile(path string) (map[string]string, error) {
 }
 
 func PatchEnvFile(path string, updates map[string]string) error {
-	if len(updates) == 0 {
+	return EditEnvFile(path, updates, nil)
+}
+
+func EditEnvFile(path string, updates map[string]string, removals []string) error {
+	if len(updates) == 0 && len(removals) == 0 {
 		return nil
+	}
+	remove := make(map[string]bool, len(removals))
+	for _, key := range removals {
+		remove[key] = true
 	}
 
 	var lines []string
@@ -58,21 +66,25 @@ func PatchEnvFile(path string, updates map[string]string) error {
 	}
 
 	seen := make(map[string]bool, len(updates))
-	for i, line := range lines {
+	kept := lines[:0]
+	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
-			continue
-		}
 		eq := strings.IndexByte(trimmed, '=')
-		if eq < 0 {
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") || eq < 0 {
+			kept = append(kept, line)
 			continue
 		}
 		key := strings.TrimSpace(trimmed[:eq])
+		if remove[key] {
+			continue
+		}
 		if val, ok := updates[key]; ok {
-			lines[i] = key + `="` + val + `"`
+			line = key + `="` + val + `"`
 			seen[key] = true
 		}
+		kept = append(kept, line)
 	}
+	lines = kept
 
 	var newKeys []string
 	for key := range updates {

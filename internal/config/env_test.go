@@ -243,3 +243,23 @@ func containsLine(text, line string) bool {
 	}
 	return false
 }
+
+func TestEditEnvFile_RemovesKeysAndKeepsTheRest(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".env")
+	if err := os.WriteFile(path, []byte("# header\nKEY_A=old\nKEY_B=drop\nKEY_C=keep\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := EditEnvFile(path, map[string]string{"KEY_A": "new"}, []string{"KEY_B", "KEY_ABSENT"}); err != nil {
+		t.Fatalf("EditEnvFile: %v", err)
+	}
+
+	body, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "# header\nKEY_A=\"new\"\nKEY_C=keep\n"
+	if string(body) != want {
+		t.Errorf("got:\n%s\nwant:\n%s", body, want)
+	}
+}

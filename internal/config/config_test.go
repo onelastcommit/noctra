@@ -1,15 +1,21 @@
 package config
 
 import (
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
 
 var noctraEnvKeys = []string{
+	"DONE_STATE", "JIRA_IN_REVIEW_STATUS", "AUTO_RELEASE_LABEL", "DEFAULT_RELEASE_BUMP", "PLAN_CONFIRM", "PLAN_CONFIRM_LABEL",
 	"AGENT_PLUGIN_PACKS", "AGENT_PLUGINS_EXTRA", "PLUGINS_DIR",
 	"GITHUB_AUTH_MODE", "NOCTRA_AUTH_URL", "GITHUB_AUTH_DIR",
 	"TICKET_SOURCE", "TICKET_SOURCES", "GITHUB_ISSUES_REPOS", "GITHUB_TRIGGER_LABEL",
@@ -1027,4 +1033,78 @@ func TestValidate_RejectsBadPluginSettings(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEnvDefaults_MatchWhatLoadFallsBackTo(t *testing.T) {
+	isolateEnv(t)
+
+	var b strings.Builder
+	for key, val := range EnvDefaults() {
+		b.WriteString(key + `="` + val + "\"\n")
+	}
+	withDefaults := t.TempDir()
+	writeFile(t, filepath.Join(withDefaults, ".env"), b.String())
+
+	explicit, err := Load(withDefaults)
+	if err != nil {
+		t.Fatalf("Load with defaults written out: %v", err)
+	}
+	implicit, err := Load(t.TempDir())
+	if err != nil {
+		t.Fatalf("Load with no .env: %v", err)
+	}
+	for _, cfg := range []*Config{explicit, implicit} {
+		cfg.ScriptDir, cfg.EnvFile, cfg.LogDir = "", "", ""
+	}
+	if !reflect.DeepEqual(explicit, implicit) {
+		t.Errorf("writing EnvDefaults out changes the loaded config:\nexplicit: %+v\nimplicit: %+v", explicit, implicit)
+	}
+}
+
+func TestEnvDefaults_CoverEverySettingWithAFixedDefault(t *testing.T) {
+	file, err := parser.ParseFile(token.NewFileSet(), "config.go", nil, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	exempt := map[string]string{
+		"TICKET_SOURCE":    "deprecated alias of TICKET_SOURCES",
+		"TELEGRAM_VERBOSE": "deprecated alias of VERBOSE_NOTIFICATIONS",
+	}
+	defaults := EnvDefaults()
+	ast.Inspect(file, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok || len(call.Args) != 3 {
+			return true
+		}
+		fn, ok := call.Fun.(*ast.Ident)
+		if !ok || !strings.HasPrefix(fn.Name, "get") {
+			return true
+		}
+		lit, ok := call.Args[1].(*ast.BasicLit)
+		if !ok || lit.Kind != token.STRING {
+			return true
+		}
+		key, _ := strconv.Unquote(lit.Value)
+		if _, skip := exempt[key]; skip || !hasFixedDefault(call.Args[2]) {
+			return true
+		}
+		if _, ok := defaults[key]; !ok {
+			t.Errorf("%s has a fixed default in config.Load but no EnvDefaults entry, so `noctra config get %s` reports it unset", key, key)
+		}
+		return true
+	})
+}
+
+func hasFixedDefault(arg ast.Expr) bool {
+	if lit, ok := arg.(*ast.BasicLit); ok && lit.Kind == token.STRING && lit.Value == `""` {
+		return false
+	}
+	isPath := false
+	ast.Inspect(arg, func(n ast.Node) bool {
+		if sel, ok := n.(*ast.SelectorExpr); ok && sel.Sel.Name == "Join" {
+			isPath = true
+		}
+		return !isPath
+	})
+	return !isPath
 }
