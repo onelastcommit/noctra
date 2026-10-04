@@ -2,6 +2,8 @@ package plugins
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,7 +38,20 @@ const SetupTimeout = 3 * time.Minute
 var licenceFiles = []string{"LICENSE", "LICENSE.md", "LICENSE.txt", "LICENCE", "LICENCE.md"}
 
 func Dir(root string, p Plugin) string {
-	return filepath.Join(root, p.Name+"@"+p.Commit[:12])
+	return filepath.Join(root, p.Name+"@"+p.Commit[:12]+"-"+variant(p.Skills))
+}
+
+func variant(skills []Skill) string {
+	if len(skills) == 0 {
+		return "all"
+	}
+	specs := make([]string, 0, len(skills))
+	for _, s := range skills {
+		specs = append(specs, strings.Join([]string{s.Path, s.DirName(), strings.Join(s.Only, ","), strings.Join(s.Exclude, ",")}, "\x1f"))
+	}
+	slices.Sort(specs)
+	sum := sha256.Sum256([]byte(strings.Join(specs, "\x1e")))
+	return hex.EncodeToString(sum[:])[:8]
 }
 
 func IsInstalled(root string, p Plugin) bool {
@@ -60,14 +75,8 @@ func InstallAll(ctx context.Context, root string, plugins []Plugin) ([]Installed
 
 func Install(ctx context.Context, root string, p Plugin) (Installed, error) {
 	dir := Dir(root, p)
-	if IsInstalled(root, p) {
-		skills, err := listSkills(dir)
-		if err == nil && coversSkills(skills, p.Skills) {
-			return Installed{Name: p.Name, Dir: dir, Vetted: p.Vetted, Skills: skills}, nil
-		}
-		if err := os.RemoveAll(dir); err != nil {
-			return Installed{}, err
-		}
+	if inst, ok := existing(root, p); ok {
+		return inst, nil
 	}
 	if err := os.MkdirAll(root, 0o755); err != nil {
 		return Installed{}, err
@@ -103,9 +112,24 @@ func Install(ctx context.Context, root string, p Plugin) (Installed, error) {
 		return Installed{}, err
 	}
 	if err := os.Rename(build, dir); err != nil {
+		if inst, ok := existing(root, p); ok {
+			return inst, nil
+		}
 		return Installed{}, err
 	}
 	return Installed{Name: p.Name, Dir: dir, Vetted: p.Vetted, Skills: skills}, nil
+}
+
+func existing(root string, p Plugin) (Installed, bool) {
+	if !IsInstalled(root, p) {
+		return Installed{}, false
+	}
+	dir := Dir(root, p)
+	skills, err := listSkills(dir)
+	if err != nil || len(skills) == 0 {
+		return Installed{}, false
+	}
+	return Installed{Name: p.Name, Dir: dir, Vetted: p.Vetted, Skills: skills}, true
 }
 
 func cloneURL(repo string) string {
@@ -325,21 +349,6 @@ func listSkills(dir string) ([]string, error) {
 		}
 	}
 	return names, nil
-}
-
-func coversSkills(have []string, wanted []Skill) bool {
-	if len(wanted) == 0 {
-		return len(have) > 0
-	}
-	if len(have) != len(wanted) {
-		return false
-	}
-	for _, s := range wanted {
-		if !slices.Contains(have, s.DirName()) {
-			return false
-		}
-	}
-	return true
 }
 
 func isFile(path string) bool {

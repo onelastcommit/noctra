@@ -118,40 +118,80 @@ func TestInstall_BuildsTrimmedPinnedPlugin(t *testing.T) {
 	}
 }
 
-func TestInstall_ReusesMatchingInstallAndRebuildsOnSkillChange(t *testing.T) {
+func TestInstall_EachSkillSetGetsItsOwnImmutableDirectory(t *testing.T) {
+	src, commit := sourceRepo(t)
+	root := t.TempDir()
+	narrow := Plugin{Name: "demo", Repo: "file://" + src, Commit: commit, Skills: []Skill{{Path: "skills/tdd"}}}
+	wide := narrow
+	wide.Skills = []Skill{{Path: "skills/tdd"}, {Path: "skills/debug"}}
+
+	first, err := Install(context.Background(), root, narrow)
+	if err != nil {
+		t.Fatal(err)
+	}
+	marker := filepath.Join(first.Dir, "skills/tdd/SKILL.md")
+	writeFile(t, marker, "in use by a running daemon")
+
+	again, err := Install(context.Background(), root, narrow)
+	if err != nil || again.Dir != first.Dir {
+		t.Fatalf("same skill set should reuse %s, got %+v, %v", first.Dir, again, err)
+	}
+
+	other, err := Install(context.Background(), root, wide)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if other.Dir == first.Dir {
+		t.Fatal("a different skill set must get its own directory")
+	}
+	if !slices.Equal(other.Skills, []string{"debug", "tdd"}) {
+		t.Fatalf("wide skills = %v", other.Skills)
+	}
+	if b, _ := os.ReadFile(marker); string(b) != "in use by a running daemon" {
+		t.Fatal("installing another skill set modified the existing directory")
+	}
+}
+
+func TestInstall_ConcurrentInstallsAgreeOnOneDirectory(t *testing.T) {
 	src, commit := sourceRepo(t)
 	root := t.TempDir()
 	p := Plugin{Name: "demo", Repo: "file://" + src, Commit: commit, Skills: []Skill{{Path: "skills/tdd"}}}
 
-	if _, err := Install(context.Background(), root, p); err != nil {
-		t.Fatal(err)
+	results := make(chan error, 4)
+	for range 4 {
+		go func() {
+			inst, err := Install(context.Background(), root, p)
+			if err == nil && inst.Dir != Dir(root, p) {
+				err = os.ErrInvalid
+			}
+			results <- err
+		}()
 	}
-	marker := filepath.Join(Dir(root, p), "skills/tdd/SKILL.md")
-	writeFile(t, marker, "cached")
+	for range 4 {
+		if err := <-results; err != nil {
+			t.Fatalf("concurrent Install: %v", err)
+		}
+	}
+	leftovers, _ := filepath.Glob(filepath.Join(root, ".*"))
+	if len(leftovers) != 0 {
+		t.Errorf("temporary directories left behind: %v", leftovers)
+	}
+}
 
-	if _, err := Install(context.Background(), root, p); err != nil {
-		t.Fatal(err)
+func TestVariant(t *testing.T) {
+	a := []Skill{{Path: "skills/tdd"}, {Path: "skills/debug"}}
+	b := []Skill{{Path: "skills/debug"}, {Path: "skills/tdd"}}
+	if variant(a) != variant(b) {
+		t.Error("variant must not depend on skill order")
 	}
-	if b, _ := os.ReadFile(marker); string(b) != "cached" {
-		t.Fatal("matching install should be reused, not refetched")
+	if variant(a) == variant(a[:1]) {
+		t.Error("different skill sets must differ")
 	}
-
-	p.Skills = append(p.Skills, Skill{Path: "skills/debug"})
-	inst, err := Install(context.Background(), root, p)
-	if err != nil {
-		t.Fatal(err)
+	if variant([]Skill{{Path: "skills/tdd", Exclude: []string{"scripts"}}}) == variant([]Skill{{Path: "skills/tdd"}}) {
+		t.Error("excludes change the installed content, so they must change the variant")
 	}
-	if !slices.Equal(inst.Skills, []string{"debug", "tdd"}) {
-		t.Fatalf("skills after change = %v", inst.Skills)
-	}
-
-	p.Skills = p.Skills[:1]
-	inst, err = Install(context.Background(), root, p)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !slices.Equal(inst.Skills, []string{"tdd"}) {
-		t.Fatalf("dropping a skill should rebuild, got %v", inst.Skills)
+	if variant(nil) != "all" {
+		t.Errorf("variant(nil) = %q", variant(nil))
 	}
 }
 
