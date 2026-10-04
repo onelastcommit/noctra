@@ -56,6 +56,26 @@ func TestDetectAgentAuth(t *testing.T) {
 			source:  "claude.ai, max plan",
 		},
 		{
+			name:    "claude oauth token login",
+			backend: "claude",
+			outputs: map[string]string{"claude": `{"loggedIn":true,"authMethod":"oauth_token","apiProvider":"firstParty"}`},
+			method:  authSubscription,
+			source:  "oauth_token",
+		},
+		{
+			name:    "claude oauth token with plan",
+			backend: "claude",
+			outputs: map[string]string{"claude": `{"loggedIn":true,"authMethod":"oauth_token","apiProvider":"firstParty","subscriptionType":"pro"}`},
+			method:  authSubscription,
+			source:  "oauth_token, pro plan",
+		},
+		{
+			name:    "claude unfamiliar method with plan",
+			backend: "claude",
+			outputs: map[string]string{"claude": `{"loggedIn":true,"authMethod":"something_new","subscriptionType":"max"}`},
+			method:  authSubscription,
+		},
+		{
 			name:    "claude console api key login",
 			backend: "claude",
 			outputs: map[string]string{"claude": `{"loggedIn":true,"authMethod":"api_key","apiProvider":"firstParty"}`},

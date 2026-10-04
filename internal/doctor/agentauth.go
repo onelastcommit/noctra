@@ -84,11 +84,11 @@ func (p authProbe) claude(ctx context.Context) agentAuth {
 		return agentAuth{authNotLoggedIn, "claude auth status"}
 	case status.APIProvider != "" && status.APIProvider != "firstParty":
 		return agentAuth{authCloud, status.APIProvider}
-	case status.AuthMethod == "claude.ai":
+	case status.AuthMethod == "claude.ai" || status.AuthMethod == "oauth_token" || status.SubscriptionType != "":
 		if status.SubscriptionType != "" {
-			return agentAuth{authSubscription, "claude.ai, " + status.SubscriptionType + " plan"}
+			return agentAuth{authSubscription, status.AuthMethod + ", " + status.SubscriptionType + " plan"}
 		}
-		return agentAuth{authSubscription, "claude.ai"}
+		return agentAuth{authSubscription, status.AuthMethod}
 	case strings.Contains(strings.ToLower(status.AuthMethod), "api"):
 		return agentAuth{authAPIKey, status.AuthMethod}
 	default:
