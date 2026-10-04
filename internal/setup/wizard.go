@@ -657,6 +657,82 @@ var pluginChoices = []struct {
 }
 
 func (w *wizard) choosePluginPacks(existing string) string {
+	base := w.chooseStackPacks(stackPacks(existing))
+	if base == plugins.NoPacks {
+		return base
+	}
+	if optional := w.chooseOptionalPacks(optionalPacks(existing)); optional != "" {
+		return base + "," + optional
+	}
+	return base
+}
+
+func splitPacks(s string) []string {
+	var out []string
+	for _, p := range strings.Split(strings.ToLower(s), ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+func stackPacks(existing string) string {
+	var out []string
+	for _, p := range splitPacks(existing) {
+		if !plugins.IsOptional(p) {
+			out = append(out, p)
+		}
+	}
+	return strings.Join(out, ",")
+}
+
+func optionalPacks(existing string) string {
+	var out []string
+	for _, p := range splitPacks(existing) {
+		if plugins.IsOptional(p) {
+			out = append(out, p)
+		}
+	}
+	return strings.Join(out, ",")
+}
+
+func (w *wizard) chooseOptionalPacks(existing string) string {
+	optional := plugins.OptionalPacks()
+	if len(optional) == 0 {
+		return ""
+	}
+	var names []string
+	fmt.Println("Optional packs, added on top (comma-separated, blank for none):")
+	for _, p := range optional {
+		fmt.Printf("  - %-10s %s\n", p.Name, p.Description)
+		names = append(names, p.Name)
+	}
+	for {
+		s := w.askEx("Optional packs", askOpts{existing: existing})
+		if w.eof {
+			return existing
+		}
+		var chosen, unknown []string
+		for _, p := range splitPacks(s) {
+			switch {
+			case slices.Contains(names, p):
+				if !slices.Contains(chosen, p) {
+					chosen = append(chosen, p)
+				}
+			case p == plugins.NoPacks:
+			default:
+				unknown = append(unknown, p)
+			}
+		}
+		if len(unknown) == 0 {
+			return strings.Join(chosen, ",")
+		}
+		fmt.Printf("  Unknown pack(s): %s. Choose from: %s.\n", strings.Join(unknown, ", "), strings.Join(names, ", "))
+	}
+}
+
+func (w *wizard) chooseStackPacks(existing string) string {
 	fmt.Println("What do you mostly build? Noctra adds curated, commit-pinned agent plugins")
 	fmt.Println("(TDD, debugging, verification, design craft…) to every run, on any backend.")
 	fallback := strconv.Itoa(len(pluginChoices))
@@ -680,12 +756,7 @@ func (w *wizard) choosePluginPacks(existing string) string {
 
 func samePacks(a, b string) bool {
 	norm := func(s string) []string {
-		var out []string
-		for _, p := range strings.Split(strings.ToLower(s), ",") {
-			if p = strings.TrimSpace(p); p != "" {
-				out = append(out, p)
-			}
-		}
+		out := splitPacks(s)
 		slices.Sort(out)
 		return out
 	}

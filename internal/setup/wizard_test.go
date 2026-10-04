@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/onelastcommit/noctra/internal/plugins"
 )
 
 func TestMask(t *testing.T) {
@@ -330,5 +332,18 @@ func TestChoosePluginPacks(t *testing.T) {
 func TestEnvValues_ToMapIncludesPluginPacks(t *testing.T) {
 	if got := (envValues{pluginPacks: "engineering"}).toMap()["AGENT_PLUGIN_PACKS"]; got != "engineering" {
 		t.Errorf("AGENT_PLUGIN_PACKS = %q", got)
+	}
+}
+
+func TestChooseOptionalPacks_SkippedWhenCatalogueHasNone(t *testing.T) {
+	if len(plugins.OptionalPacks()) > 0 {
+		t.Skip("catalogue has optional packs; covered by TestChoosePluginPacks_OptionalPacks")
+	}
+	w := newWizardWithInput("leftover\n")
+	if got := w.chooseOptionalPacks(""); got != "" {
+		t.Fatalf("got %q, want no optional packs", got)
+	}
+	if got := w.readLine(""); got != "leftover" {
+		t.Fatalf("the skipped question consumed input; next line = %q", got)
 	}
 }

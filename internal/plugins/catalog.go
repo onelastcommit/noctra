@@ -35,6 +35,7 @@ type Plugin struct {
 type Pack struct {
 	Name        string
 	Description string
+	Optional    bool
 	Plugins     []Plugin
 }
 
@@ -151,6 +152,21 @@ func PackNames() []string {
 		names = append(names, p.Name)
 	}
 	return names
+}
+
+func OptionalPacks() []Pack {
+	var out []Pack
+	for _, p := range catalog {
+		if p.Optional {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+func IsOptional(name string) bool {
+	p, ok := findPack(name)
+	return ok && p.Optional
 }
 
 func findPack(name string) (Pack, bool) {

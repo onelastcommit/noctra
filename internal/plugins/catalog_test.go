@@ -164,3 +164,14 @@ func TestParseExtra_RequiresFullSHA(t *testing.T) {
 		t.Fatalf("got %+v", p)
 	}
 }
+
+func TestStackPacksAreNotOptional(t *testing.T) {
+	for _, name := range []string{BasePack, "frontend", "backend"} {
+		if IsOptional(name) {
+			t.Errorf("%s should be a stack pack", name)
+		}
+	}
+	if IsOptional("no-such-pack") {
+		t.Error("an unknown pack is not optional")
+	}
+}
