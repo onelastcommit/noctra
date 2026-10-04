@@ -242,15 +242,21 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 
 	items := make([]agent.FeedbackItem, 0, len(ch.Events))
 	for _, ev := range ch.Events {
-		items = append(items, agent.FeedbackItem{
+		item := agent.FeedbackItem{
 			Kind:   string(ev.Type),
 			Author: ev.Author.Login,
+			Human:  !ev.Author.IsBot(),
 			Body:   ev.Body,
 			URL:    ev.URL,
 			State:  ev.ReviewState,
 			Path:   ev.Path,
 			Line:   ev.Line,
-		})
+		}
+		if ev.ReplyTo != nil {
+			item.ReplyToAuthor = ev.ReplyTo.Author.Login
+			item.ReplyToBody = ev.ReplyTo.Body
+		}
+		items = append(items, item)
 	}
 
 	var ciItems []agent.CIItem
@@ -549,28 +555,7 @@ func (p *Pipeline) ackEngagement(ctx context.Context, ch watch.PRChanges) {
 }
 
 func (p *Pipeline) postIterationReplies(ctx context.Context, ch watch.PRChanges, agentOutput, sha, convReply string, logger *slog.Logger) {
-	threadReplies := map[int64]github.ThreadReply{}
-	if findings, ok := agent.ExtractFindingReplies(agentOutput); ok {
-		for _, f := range findings {
-			idx := f.Finding - 1
-			if idx < 0 || idx >= len(ch.Events) {
-				continue
-			}
-			ev := ch.Events[idx]
-			if ev.Path == "" || ev.CommentID == "" {
-				continue
-			}
-			commentID, err := strconv.ParseInt(ev.CommentID, 10, 64)
-			if err != nil {
-				continue
-			}
-			body := f.Reply
-			if f.Addressed && sha != "" {
-				body = fmt.Sprintf("Addressed in %s.\n\n%s", sha, f.Reply)
-			}
-			threadReplies[commentID] = github.ThreadReply{Body: body, Resolve: f.Addressed}
-		}
-	}
+	threadReplies := threadRepliesFor(ch, agentOutput, sha)
 
 	p.gh.ReplyToThreadsByComment(ctx, ch.PR.URL, threadReplies)
 
@@ -583,6 +568,34 @@ func (p *Pipeline) postIterationReplies(ctx context.Context, ch watch.PRChanges,
 			logger.Warn("post iteration reply failed", "err", err)
 		}
 	}
+}
+
+func threadRepliesFor(ch watch.PRChanges, agentOutput, sha string) map[int64]github.ThreadReply {
+	threadReplies := map[int64]github.ThreadReply{}
+	findings, ok := agent.ExtractFindingReplies(agentOutput)
+	if !ok {
+		return threadReplies
+	}
+	for _, f := range findings {
+		idx := f.Finding - 1
+		if idx < 0 || idx >= len(ch.Events) {
+			continue
+		}
+		ev := ch.Events[idx]
+		if ev.Path == "" || ev.ThreadID == "" {
+			continue
+		}
+		threadID, err := strconv.ParseInt(ev.ThreadID, 10, 64)
+		if err != nil {
+			continue
+		}
+		body := f.Reply
+		if f.Addressed && sha != "" {
+			body = fmt.Sprintf("Addressed in %s.\n\n%s", sha, f.Reply)
+		}
+		threadReplies[threadID] = github.ThreadReply{Body: body, Resolve: f.Addressed}
+	}
+	return threadReplies
 }
 
 func (p *Pipeline) replyToConversation(ctx context.Context, ch watch.PRChanges, reply string, logger *slog.Logger) {

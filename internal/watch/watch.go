@@ -29,6 +29,8 @@ type Event struct {
 	Path        string
 	Line        int
 	CommentID   string
+	ThreadID    string
+	ReplyTo     *github.ReviewComment
 }
 
 type CIFailure struct {
@@ -125,6 +127,10 @@ func (w *Watcher) diff(pr github.PR, d *github.Details, cursor state.PRState) PR
 		}
 	}
 
+	byID := make(map[int64]github.ReviewComment, len(d.ReviewComments))
+	for _, rc := range d.ReviewComments {
+		byID[rc.ID] = rc
+	}
 	for _, rc := range d.ReviewComments {
 		if !rc.CreatedAt.After(cursor.LastCommentAt) {
 			continue
@@ -141,6 +147,10 @@ func (w *Watcher) diff(pr github.PR, d *github.Details, cursor state.PRState) PR
 			Path:      rc.Path,
 			Line:      rc.Line,
 			CommentID: strconv.FormatInt(rc.ID, 10),
+			ThreadID:  strconv.FormatInt(rc.ThreadRootID(), 10),
+		}
+		if parent, ok := byID[rc.InReplyTo]; ok {
+			ev.ReplyTo = &parent
 		}
 		if w.actionable(ev) {
 			out.Events = append(out.Events, ev)
