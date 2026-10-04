@@ -13,7 +13,7 @@ sweep loop   (SWEEP_ENABLED)    → scheduler.Plan → pipeline.processSweepTask
 auth loop    (AUTH_CHECK_SCHEDULE, daily at noon by default) → authcheck.RunAll → authcheck.Tracker → notify while broken / on recovery
 ```
 
-- `TRIGGER_MODE=state` (default) polls the `TRIGGER_STATE` column. `TRIGGER_MODE=label` polls for `TRIGGER_LABEL` regardless of column and **removes** the label after dispatch so the ticket isn't re-polled; the trigger-state ID is then not resolved, but the in-review state still is.
+- `TRIGGER_MODE=state` (default) polls the `TRIGGER_STATE` column. `TRIGGER_MODE=label` polls for `TRIGGER_LABEL` regardless of column and **removes** the label once the ticket has a PR or needed no changes (`MarkReady`, `MarkDone`, `Archive`). A blocked or failed ticket keeps it and is re-polled until `MAX_RETRIES`. In label mode the trigger-state ID is not resolved, but the in-review state still is.
 - Worktrees live at `~/.noctra-worktrees/<IDENTIFIER>` so tickets run concurrently.
 
 ## Guardrails
@@ -44,7 +44,7 @@ Auto-iterate resolves the same way from the PR URL (`prRepoOwnerRepo` → `Resol
 
 ## Config directory
 
-Config defaults to `~/.noctra/` (`.env`, `logs/`, `state.db`). If the current directory contains `.env`, `.env.example` or `go.mod`, Noctra uses cwd instead, so `go run` works without touching `~/.noctra/` (`resolveScriptDir()` in `cmd/noctra/main.go`; `config.DefaultConfigDir()`). Every variable is documented in `.env.example`.
+Config defaults to `~/.noctra/` (`.env`, `logs/`, `state.db`). If the current directory contains `.env`, `.env.example` or `go.mod`, Noctra reads `.env` and writes `logs/` there instead, so `go run` works without touching `~/.noctra/` (`resolveScriptDir()` in `cmd/noctra/main.go`). `state.db` and the GitHub App key stay under `~/.noctra/` (`config.DefaultConfigDir()`) unless `STATE_DB` / `GITHUB_AUTH_DIR` say otherwise. Every variable is documented in `.env.example`.
 
 ## Code style
 

@@ -2,7 +2,7 @@
 
 `noctra setup` writes `.env` interactively. It saves only the settings that differ from the defaults, and removes a line when you set it back to its default. The one exception: if your shell exports a different value for that setting, setup keeps the line so your choice still wins. Re-running it is safe: it merges into the existing file and keeps hand-added keys. Every variable, with its default, is documented in [`.env.example`](../.env.example); this page covers what each feature does.
 
-Config lives in `~/.noctra/` (`.env`, `logs/`, `state.db`). If the current directory contains `.env`, `.env.example` or `go.mod`, that directory is used instead.
+Config lives in `~/.noctra/` (`.env`, `logs/`, `state.db`). If the current directory contains `.env`, `.env.example` or `go.mod`, `.env` and `logs/` are taken from that directory instead; `state.db` stays in `~/.noctra/` unless `STATE_DB` is set.
 
 ```bash
 noctra config path              # resolved .env path
@@ -18,7 +18,7 @@ noctra config set KEY=VALUE     # atomic write, keeps comments and other keys
 | `TICKET_SOURCES` | `linear` | `linear`, `github` (Issues), `jira`, or a comma-separated mix |
 | `LINEAR_TEAM_KEY` | `ENG` | Prefix before ticket numbers |
 | `TRIGGER_MODE` | `state` | `state` watches a column; `label` watches a label in any column |
-| `TRIGGER_STATE` / `TRIGGER_LABEL` | `Next` / — | What to watch. The label is removed after dispatch |
+| `TRIGGER_STATE` / `TRIGGER_LABEL` | `Next` / — | What to watch. The label is removed once the ticket has a PR or needed no changes |
 | `IN_REVIEW_STATE` | `In Review` | Set once the PR exists |
 | `MAX_CONCURRENT` | `3` | Tickets in flight at once |
 | `AGENT_BACKEND` | `claude` | `claude`, `codex`, `copilot` or `antigravity` |
@@ -70,7 +70,7 @@ The daily caps are worth setting on a subscription login too: sweeps and Agent T
 | `USE_AGENT_TEAMS` *(Claude only)* | One agent per ticket — cheap, runs anywhere | A lead agent delegates implementation, tests and review to teammates in parallel |
 | `GEMINI_API_KEY` | No external review | Gemini reviews the diff before the PR opens |
 
-A second model has different blind spots. With the review gate on, Noctra sends the diff and ticket to Gemini, posts its findings as inline PR comments, and gives the agent `MAX_REVIEW_RETRIES` fix passes. If it still fails, the PR opens anyway with the verdict in the body. Expect roughly $0.01–$0.05 per ticket with `gemini-2.5-pro`.
+A second model has different blind spots. With the review gate on, Noctra sends the diff and ticket to Gemini, posts its findings as inline PR comments, and gives the agent `MAX_REVIEW_RETRIES` fix passes. If it still fails, the PR opens anyway, with the verdict posted as a PR comment. Expect roughly $0.01–$0.05 per ticket with `gemini-2.5-pro`.
 
 ### Language
 
@@ -86,6 +86,19 @@ TRUSTED_REVIEWERS=       # bot logins to act on; empty = humans only
 ```
 
 Noctra watches the PRs it opened. When review feedback lands (conversation comments, reviews, inline threads) or CI fails on the head commit, it re-runs the agent on the same branch and pushes a follow-up commit. It replies to each review thread, and resolves only the ones it addressed. Bot reviews are ignored unless listed in `TRUSTED_REVIEWERS`. Progress survives restarts, and you get a ping on every re-engagement and when the cap is hit.
+
+### Learning from your edits
+
+With auto-iterate on and the Gemini review gate configured, Noctra learns from merged PRs. It reads only the commits a human added on top of its own, has Gemini fold any reusable convention into a short per-repo list, and includes that list in later prompts for the same repo. Merges, bot commits and Noctra's own commits are ignored.
+
+## Plan before implementing
+
+```env
+PLAN_CONFIRM=false          # true = every ticket
+PLAN_CONFIRM_LABEL=plan-first
+```
+
+For a ticket carrying the label (or every ticket with `PLAN_CONFIRM=true`), the agent first posts an implementation plan as a ticket comment and stops. Reply `go`, `lgtm`, `approved` or 👍 and the next poll implements it with the plan as context.
 
 ## Maintenance sweeps
 
@@ -121,4 +134,4 @@ Once a day at noon (`AUTH_CHECK_SCHEDULE`, a cron expression in the host's local
 
 ## Dashboard
 
-Set `DASHBOARD_ADDR` (e.g. `:8080`) and `DASHBOARD_TOKEN`, then open `http://<host>:8080/?token=<DASHBOARD_TOKEN>` for live runs, history, token and cost charts, budget, and the sweep matrix. `DASHBOARD_ADMIN_TOKEN` (passed as `&admin_token=…`) unlocks kill, requeue, retry, pause and sweep controls. For a remote host, set `DASHBOARD_SSH=user@host` and run `make dashboard` to tunnel to it.
+Set `DASHBOARD_ADDR` (e.g. `:8080`) and `DASHBOARD_TOKEN`, then open `http://<host>:8080/?token=<DASHBOARD_TOKEN>` for live runs, history, token and cost charts, budget, and the sweep matrix. `DASHBOARD_ADMIN_TOKEN` (passed as `&admin_token=…`) unlocks kill, requeue, retry, pause and sweep controls. For a remote host, set `DASHBOARD_SSH=user@host` and run `noctra dashboard` on your laptop to tunnel to it.

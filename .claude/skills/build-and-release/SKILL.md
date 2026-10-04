@@ -74,7 +74,7 @@ The startup banner (`pipeline.banner`) prints the resolved runtime config — re
 
 ## Docker Image
 
-`Dockerfile` is multi-stage: a `golang` stage compiles the static binary, and a `node:20-bookworm-slim` runtime adds `git`, `gh` and every agent CLI (`@anthropic-ai/claude-code`, `@openai/codex`, `@github/copilot`, via npm) — Noctra shells out to all of them, so the image can't be `scratch`.
+`Dockerfile` is multi-stage: a `golang` stage compiles the static binary, and a `node:24-bookworm-slim` runtime adds `git`, `gh` and the npm-installed agent CLIs (`@anthropic-ai/claude-code`, `@openai/codex`, `@github/copilot`; Antigravity's `agy` is not included) — Noctra shells out to all of them, so the image can't be `scratch`.
 
 - `docker-entrypoint.sh` sets a default git identity and wires `GH_TOKEN` into git/gh; a fresh container has neither (both were once silently inherited from the dev's machine).
 - All mutable state goes under one `/data` volume via `REPOS_BASE` / `WORKTREE_BASE` / `LOG_DIR` / `STATE_DB` (plus legacy `STATE_FILE` as the one-time JSON migration source).
