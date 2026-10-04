@@ -99,6 +99,34 @@ const (
 	SuggestedTrustedReviewer = "chatgpt-codex-connector"
 )
 
+func EnvDefaults() map[string]string {
+	return map[string]string{
+		"LINEAR_TEAM_KEY":       DefaultLinearTeamKey,
+		"AGENT_BACKEND":         DefaultAgentBackend,
+		"TRIGGER_MODE":          DefaultTriggerMode,
+		"TRIGGER_STATE":         DefaultTriggerState,
+		"IN_REVIEW_STATE":       DefaultInReviewState,
+		"MAIN_BRANCH":           DefaultMainBranch,
+		"MAX_CONCURRENT":        strconv.Itoa(DefaultMaxConcurrent),
+		"POLL_INTERVAL":         strconv.Itoa(int(DefaultPollInterval / time.Second)),
+		"USE_AGENT_TEAMS":       "false",
+		"MAX_DISPATCHES":        strconv.Itoa(DefaultMaxDispatches),
+		"MAX_RETRIES":           strconv.Itoa(DefaultMaxRetries),
+		"AGENT_TIMEOUT_MINUTES": strconv.Itoa(int(DefaultAgentTimeout / time.Minute)),
+		"TELEGRAM_ENABLED":      "false",
+		"VERBOSE_NOTIFICATIONS": "false",
+		"GEMINI_MODE":           DefaultGeminiMode,
+		"GEMINI_MODEL":          DefaultGeminiModel,
+		"MAX_REVIEW_RETRIES":    strconv.Itoa(DefaultMaxReviewRetries),
+		"AUTO_ITERATE_PRS":      "false",
+		"MAX_PR_ITERATIONS":     strconv.Itoa(DefaultMaxPRIterations),
+		"PR_POLL_INTERVAL":      strconv.Itoa(int(DefaultPRPollInterval / time.Second)),
+		"SWEEP_ENABLED":         "false",
+		"SWEEP_INTERVAL":        strconv.Itoa(int(DefaultSweepInterval / time.Second)),
+		"SWEEP_MAX_TASKS":       strconv.Itoa(DefaultSweepMaxTasks),
+	}
+}
+
 type Config struct {
 	TicketSources      []string
 	GitHubIssuesRepos  []string

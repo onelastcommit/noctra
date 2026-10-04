@@ -153,7 +153,11 @@ func runGet(envFile, key string) error {
 	}
 	val, ok := env[key]
 	if !ok {
-		return fmt.Errorf("key %q is not set in %s", key, envFile)
+		def, hasDefault := config.EnvDefaults()[key]
+		if !hasDefault {
+			return fmt.Errorf("key %q is not set in %s", key, envFile)
+		}
+		val = def
 	}
 	fmt.Println(val)
 	return nil

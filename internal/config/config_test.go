@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -1026,5 +1027,31 @@ func TestValidate_RejectsBadPluginSettings(t *testing.T) {
 				t.Fatal("Validate accepted bad plugin settings")
 			}
 		})
+	}
+}
+
+func TestEnvDefaults_MatchWhatLoadFallsBackTo(t *testing.T) {
+	isolateEnv(t)
+
+	var b strings.Builder
+	for key, val := range EnvDefaults() {
+		b.WriteString(key + `="` + val + "\"\n")
+	}
+	withDefaults := t.TempDir()
+	writeFile(t, filepath.Join(withDefaults, ".env"), b.String())
+
+	explicit, err := Load(withDefaults)
+	if err != nil {
+		t.Fatalf("Load with defaults written out: %v", err)
+	}
+	implicit, err := Load(t.TempDir())
+	if err != nil {
+		t.Fatalf("Load with no .env: %v", err)
+	}
+	for _, cfg := range []*Config{explicit, implicit} {
+		cfg.ScriptDir, cfg.EnvFile, cfg.LogDir = "", "", ""
+	}
+	if !reflect.DeepEqual(explicit, implicit) {
+		t.Errorf("writing EnvDefaults out changes the loaded config:\nexplicit: %+v\nimplicit: %+v", explicit, implicit)
 	}
 }

@@ -37,6 +37,15 @@ func TestRunGet_MissingKey(t *testing.T) {
 	}
 }
 
+func TestRunGet_UnsetKeyFallsBackToDefault(t *testing.T) {
+	envFile := filepath.Join(t.TempDir(), ".env")
+	writeTestFile(t, envFile, `LINEAR_API_KEY="lin_abc"`)
+
+	if err := runGet(envFile, "MAX_PR_ITERATIONS"); err != nil {
+		t.Errorf("runGet should print the default for an unset key that has one: %v", err)
+	}
+}
+
 func TestRunGet_MissingFile(t *testing.T) {
 	envFile := filepath.Join(t.TempDir(), ".env")
 	if err := runGet(envFile, "ANY"); err == nil {
