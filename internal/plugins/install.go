@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 )
@@ -155,11 +156,21 @@ func copySkills(clone, build string, wanted []Skill) ([]string, error) {
 		if !isFile(filepath.Join(src, skillEntry)) {
 			return nil, fmt.Errorf("%s has no %s", s.Path, skillEntry)
 		}
-		name := filepath.Base(src)
+		name := s.DirName()
+		if !skillNameRe.MatchString(name) {
+			return nil, fmt.Errorf("skill at %q needs a name (got %q)", s.Path, name)
+		}
 		if slices.Contains(names, name) {
 			return nil, fmt.Errorf("two skills named %q", name)
 		}
-		if err := copyTree(src, filepath.Join(build, skillsDir, name), s.Exclude); err != nil {
+		dst := filepath.Join(build, skillsDir, name)
+		var err error
+		if len(s.Only) > 0 {
+			err = copyOnly(src, dst, s.Only)
+		} else {
+			err = copyTree(src, dst, s.Exclude)
+		}
+		if err != nil {
 			return nil, err
 		}
 		names = append(names, name)
@@ -209,6 +220,32 @@ func copyTree(src, dst string, exclude []string) error {
 			return nil
 		}
 	})
+}
+
+var skillNameRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
+
+func copyOnly(src, dst string, files []string) error {
+	if !slices.Contains(files, skillEntry) {
+		files = append([]string{skillEntry}, files...)
+	}
+	for _, rel := range files {
+		from := filepath.Join(src, filepath.FromSlash(rel))
+		info, err := os.Lstat(from)
+		if err != nil {
+			return fmt.Errorf("%s: %w", rel, err)
+		}
+		if !info.Mode().IsRegular() {
+			return fmt.Errorf("%s is not a regular file", rel)
+		}
+		to := filepath.Join(dst, filepath.FromSlash(rel))
+		if err := os.MkdirAll(filepath.Dir(to), 0o755); err != nil {
+			return err
+		}
+		if err := copyFile(from, to); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func excluded(rel string, exclude []string) bool {
@@ -287,7 +324,7 @@ func coversSkills(have []string, wanted []Skill) bool {
 		return false
 	}
 	for _, s := range wanted {
-		if !slices.Contains(have, filepath.Base(filepath.FromSlash(s.Path))) {
+		if !slices.Contains(have, s.DirName()) {
 			return false
 		}
 	}

@@ -212,3 +212,80 @@ func TestCloneURL(t *testing.T) {
 		}
 	}
 }
+
+func rootSkillRepo(t *testing.T) (dir, commit string) {
+	t.Helper()
+	requireGit(t)
+	dir = t.TempDir()
+	runGit(t, dir, "init", "-b", "main", "--quiet")
+	runGit(t, dir, "config", "user.email", "t@t")
+	runGit(t, dir, "config", "user.name", "T")
+	runGit(t, dir, "config", "commit.gpgsign", "false")
+	runGit(t, dir, "config", "uploadpack.allowReachableSHA1InWant", "true")
+	writeFile(t, filepath.Join(dir, "LICENSE"), "MIT")
+	writeFile(t, filepath.Join(dir, "SKILL.md"), "---\nname: humanizer\n---\n")
+	writeFile(t, filepath.Join(dir, "README.md"), "readme")
+	writeFile(t, filepath.Join(dir, "scripts/validate.py"), "print(1)")
+	writeFile(t, filepath.Join(dir, ".claude-plugin/plugin.json"), "{}")
+	if err := os.Symlink("/etc/passwd", filepath.Join(dir, "leak.md")); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, dir, "add", "-A")
+	runGit(t, dir, "commit", "-m", "init", "--quiet")
+	return dir, runGit(t, dir, "rev-parse", "HEAD")
+}
+
+func TestInstall_RootLevelSkillCopiesOnlyListedFiles(t *testing.T) {
+	src, commit := rootSkillRepo(t)
+	p := Plugin{Name: "humanizer", Repo: "file://" + src, Commit: commit, Skills: []Skill{{Path: ".", Name: "humanizer", Only: []string{"SKILL.md"}}}}
+
+	inst, err := Install(context.Background(), t.TempDir(), p)
+	if err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if !slices.Equal(inst.Skills, []string{"humanizer"}) {
+		t.Fatalf("skills = %v", inst.Skills)
+	}
+	entries, err := os.ReadDir(filepath.Join(inst.Dir, "skills", "humanizer"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "SKILL.md" {
+		t.Fatalf("skill folder holds %v, want only SKILL.md", entries)
+	}
+	if _, err := os.Stat(filepath.Join(inst.Dir, "LICENSE")); err != nil {
+		t.Errorf("root licence not copied: %v", err)
+	}
+
+	again, err := Install(context.Background(), filepath.Dir(inst.Dir), p)
+	if err != nil || again.Dir != inst.Dir {
+		t.Fatalf("reinstall = %+v, %v", again, err)
+	}
+}
+
+func TestInstall_RootLevelSkillRules(t *testing.T) {
+	src, commit := rootSkillRepo(t)
+	cases := map[string]Skill{
+		"root skill without a name": {Path: "."},
+		"symlink in Only":           {Path: ".", Name: "humanizer", Only: []string{"leak.md"}},
+		"missing file in Only":      {Path: ".", Name: "humanizer", Only: []string{"nope.md"}},
+		"invalid name":              {Path: ".", Name: "Humanizer!"},
+	}
+	for name, skill := range cases {
+		t.Run(name, func(t *testing.T) {
+			p := Plugin{Name: "humanizer", Repo: "file://" + src, Commit: commit, Skills: []Skill{skill}}
+			if _, err := Install(context.Background(), t.TempDir(), p); err == nil {
+				t.Fatal("want an error")
+			}
+		})
+	}
+}
+
+func TestSkillDirName(t *testing.T) {
+	if got := (Skill{Path: "skills/tdd"}).DirName(); got != "tdd" {
+		t.Errorf("got %q", got)
+	}
+	if got := (Skill{Path: ".", Name: "humanizer"}).DirName(); got != "humanizer" {
+		t.Errorf("got %q", got)
+	}
+}

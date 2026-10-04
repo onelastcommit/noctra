@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -9,7 +10,16 @@ import (
 
 type Skill struct {
 	Path    string
+	Name    string
+	Only    []string
 	Exclude []string
+}
+
+func (s Skill) DirName() string {
+	if s.Name != "" {
+		return s.Name
+	}
+	return filepath.Base(filepath.FromSlash(s.Path))
 }
 
 type Plugin struct {
