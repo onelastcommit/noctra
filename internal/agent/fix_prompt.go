@@ -6,13 +6,16 @@ import (
 )
 
 type FeedbackItem struct {
-	Kind   string
-	Author string
-	Body   string
-	State  string
-	URL    string
-	Path   string
-	Line   int
+	Kind          string
+	Author        string
+	Human         bool
+	Body          string
+	State         string
+	URL           string
+	Path          string
+	Line          int
+	ReplyToAuthor string
+	ReplyToBody   string
 }
 
 type CIItem struct {
@@ -43,7 +46,11 @@ func BuildFixPrompt(in FixPromptInput) string {
 	if len(in.Feedback) > 0 {
 		sections.WriteString("## Review feedback to address\n\n")
 		for i, f := range in.Feedback {
-			fmt.Fprintf(&sections, "### %d) %s by @%s\n", i+1, sectionLabel(f.Kind, f.State), f.Author)
+			who := "@" + f.Author
+			if f.Human {
+				who += " (human reviewer)"
+			}
+			fmt.Fprintf(&sections, "### %d) %s by %s\n", i+1, sectionLabel(f.Kind, f.State), who)
 			if f.Path != "" {
 				if f.Line > 0 {
 					fmt.Fprintf(&sections, "on `%s:%d`\n", f.Path, f.Line)
@@ -55,6 +62,9 @@ func BuildFixPrompt(in FixPromptInput) string {
 				fmt.Fprintf(&sections, "(%s)\n", f.URL)
 			}
 			sections.WriteByte('\n')
+			if parent := strings.TrimSpace(f.ReplyToBody); parent != "" {
+				fmt.Fprintf(&sections, "In reply to @%s, who wrote:\n%s\n\nThe reply:\n", f.ReplyToAuthor, quote(parent))
+			}
 			sections.WriteString(strings.TrimSpace(f.Body))
 			sections.WriteString("\n\n")
 		}
@@ -115,7 +125,8 @@ Then, after the summary, report on each numbered review finding above so Noctra 
 
 - Address ONLY the feedback and CI failures listed above. Do not refactor unrelated code or pick up new work.
 - If CI is failing, reproduce it locally (run the relevant tests / linter), fix the root cause, and re-run to confirm it passes.
-- If a piece of feedback is wrong or inapplicable, briefly say so and skip it — do not silently ignore it.
+- A human reviewer's request is an instruction, including one that agrees with another reviewer's finding ("good point, let's fix this"). Make the change. Push back only if it would break something or can't be done, and say why.
+- If a bot's feedback is wrong or inapplicable, briefly say so and skip it — do not silently ignore it.
 - Run the test suite and the linter (`+"`golangci-lint run`"+`, if configured) after your changes; fix anything you broke.
 - If you cannot proceed because more context is needed, say BLOCKED: <reason> and stop.
 - Do NOT create a new PR, push a new branch, or close the existing PR — Noctra handles that.
@@ -124,6 +135,14 @@ Then, after the summary, report on each numbered review finding above so Noctra 
 
 Wrap a short summary between %s and %s. Say what you addressed and how, and call out anything you deliberately skipped or pushed back on (with the reason) — this is posted back on the PR for the reviewer.
 %s`, in.Identifier, in.Title, desc, in.PRNumber, in.PRURL, lessonsSection, priorSection, sections.String(), SummaryStartMarker, SummaryEndMarker, findingsSection)
+}
+
+func quote(s string) string {
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		lines[i] = "> " + l
+	}
+	return strings.Join(lines, "\n")
 }
 
 func sectionLabel(kind, state string) string {

@@ -169,3 +169,30 @@ func TestBuildFixPrompt_IncludesLessons(t *testing.T) {
 		t.Errorf("expected lesson content in fix prompt:\n%s", out)
 	}
 }
+
+func TestBuildFixPrompt_ShowsWhatAHumanReplyRefersTo(t *testing.T) {
+	out := BuildFixPrompt(FixPromptInput{
+		Identifier: "ENG-465",
+		Title:      "Document v0.48.0",
+		Feedback: []FeedbackItem{{
+			Kind:          "comment",
+			Author:        "alice",
+			Human:         true,
+			Body:          "Good point, let's fix this",
+			Path:          "src/pages/docs.astro",
+			Line:          376,
+			ReplyToAuthor: "noctra-agent[bot]",
+			ReplyToBody:   "The docs still need to reflect\nthe new feature.",
+		}},
+	})
+	for _, want := range []string{
+		"by @alice (human reviewer)",
+		"In reply to @noctra-agent[bot], who wrote:\n> The docs still need to reflect\n> the new feature.",
+		"Good point, let's fix this",
+		"A human reviewer's request is an instruction",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("prompt missing %q\n---\n%s", want, out)
+		}
+	}
+}

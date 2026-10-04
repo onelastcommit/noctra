@@ -441,3 +441,42 @@ func TestDiff_EmptyCommentedReviewIsIgnored(t *testing.T) {
 		t.Errorf("empty COMMENTED review (just a wrapper) should be ignored, got %d events", len(ch.Events))
 	}
 }
+
+func TestDiff_InlineReplyCarriesThreadRootAndParent(t *testing.T) {
+	w := newTestWatcher(t, nil)
+	pr := github.PR{URL: "https://github.com/me/repo/pull/1", Number: 1}
+	details := &github.Details{
+		State: "OPEN",
+		ReviewComments: []github.ReviewComment{
+			{
+				ID:        100,
+				Author:    github.Actor{Login: "gemini-bot", Type: "Bot"},
+				Body:      "describe the new feature",
+				CreatedAt: time.Date(2026, 5, 30, 11, 0, 0, 0, time.UTC),
+				Path:      "docs.astro",
+				Line:      376,
+			},
+			{
+				ID:        200,
+				InReplyTo: 100,
+				Author:    github.Actor{Login: "alice", Type: "User"},
+				Body:      "good point, let's fix this",
+				CreatedAt: time.Date(2026, 5, 30, 12, 0, 0, 0, time.UTC),
+				Path:      "docs.astro",
+				Line:      376,
+			},
+		},
+	}
+
+	ch := w.diff(pr, details, state.PRState{})
+	if len(ch.Events) != 1 {
+		t.Fatalf("expected only the human reply to be actionable, got %d", len(ch.Events))
+	}
+	ev := ch.Events[0]
+	if ev.CommentID != "200" || ev.ThreadID != "100" {
+		t.Errorf("CommentID=%q ThreadID=%q, want 200 and 100", ev.CommentID, ev.ThreadID)
+	}
+	if ev.ReplyTo == nil || ev.ReplyTo.Body != "describe the new feature" {
+		t.Errorf("ReplyTo should carry the parent comment, got %+v", ev.ReplyTo)
+	}
+}

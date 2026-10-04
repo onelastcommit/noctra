@@ -43,6 +43,14 @@ type ReviewComment struct {
 	URL       string    `json:"html_url"`
 	Path      string    `json:"path"`
 	Line      int       `json:"line"`
+	InReplyTo int64     `json:"in_reply_to_id"`
+}
+
+func (rc ReviewComment) ThreadRootID() int64 {
+	if rc.InReplyTo != 0 {
+		return rc.InReplyTo
+	}
+	return rc.ID
 }
 
 type Check struct {
