@@ -74,7 +74,7 @@ func Install(ctx context.Context, root string, p Plugin) (Installed, error) {
 	if err != nil {
 		return Installed{}, err
 	}
-	defer os.RemoveAll(clone)
+	defer func() { _ = os.RemoveAll(clone) }()
 	if err := fetchCommit(ctx, clone, p); err != nil {
 		return Installed{}, err
 	}
@@ -83,7 +83,7 @@ func Install(ctx context.Context, root string, p Plugin) (Installed, error) {
 	if err != nil {
 		return Installed{}, err
 	}
-	defer os.RemoveAll(build)
+	defer func() { _ = os.RemoveAll(build) }()
 
 	skills, err := copySkills(clone, build, p.Skills)
 	if err != nil {
