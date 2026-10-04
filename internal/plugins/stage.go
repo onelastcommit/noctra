@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -12,6 +13,7 @@ const (
 	StagedSkillsDir     = ".agents/skills"
 	stagedSkillPrefix   = "noctra-"
 	StagedSkillsExclude = "/" + StagedSkillsDir + "/" + stagedSkillPrefix + "*/"
+	stagedMarker        = ".noctra-staged"
 )
 
 func StagedSkillName(pluginDir, skill string) string {
@@ -49,14 +51,32 @@ func Stage(workdir string, pluginDirs []string) (func(), error) {
 		}
 		for _, skill := range skills {
 			dst := filepath.Join(target, StagedSkillName(pluginDir, skill))
-			_ = os.RemoveAll(dst)
+			if exists(dst) {
+				if !isFile(filepath.Join(dst, stagedMarker)) {
+					errs = append(errs, fmt.Errorf("%s already exists and isn't Noctra's; leaving it alone and skipping that skill", dst))
+					continue
+				}
+				if err := os.RemoveAll(dst); err != nil {
+					errs = append(errs, err)
+					continue
+				}
+			}
 			staged = append(staged, dst)
 			if err := copyTree(filepath.Join(pluginDir, skillsDir, skill), dst, nil); err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			if err := os.WriteFile(filepath.Join(dst, stagedMarker), nil, 0o644); err != nil {
 				errs = append(errs, err)
 			}
 		}
 	}
 	return cleanup, errors.Join(errs...)
+}
+
+func exists(path string) bool {
+	_, err := os.Lstat(path)
+	return err == nil
 }
 
 func missingAncestors(base, path string) []string {

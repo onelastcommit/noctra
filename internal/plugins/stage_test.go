@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -98,5 +99,61 @@ func TestExcludeStaged_HidesStagedSkillsFromGit(t *testing.T) {
 	status := runGit(t, repo, "status", "--porcelain", "--untracked-files=all")
 	if status != "?? .agents/skills/house-style/SKILL.md" {
 		t.Fatalf("git status = %q, want only the repository's own skill", status)
+	}
+}
+
+func TestStage_NeverTouchesAProjectOwnedSkillAtTheSamePath(t *testing.T) {
+	requireGit(t)
+	pluginDir := installedPlugin(t)
+	repo := t.TempDir()
+	runGit(t, repo, "init", "-b", "main", "--quiet")
+	runGit(t, repo, "config", "user.email", "t@t")
+	runGit(t, repo, "config", "user.name", "T")
+	runGit(t, repo, "config", "commit.gpgsign", "false")
+	owned := filepath.Join(repo, StagedSkillsDir, "noctra-demo-tdd", "SKILL.md")
+	writeFile(t, owned, "the project's own skill")
+	runGit(t, repo, "add", "-A")
+	runGit(t, repo, "commit", "-m", "init", "--quiet")
+	if err := ExcludeStaged(context.Background(), repo); err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, err := Stage(repo, []string{pluginDir})
+	if err == nil || !strings.Contains(err.Error(), "isn't Noctra's") {
+		t.Fatalf("want a collision error, got %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(repo, StagedSkillsDir, "noctra-demo-debug", "SKILL.md")); err != nil {
+		t.Errorf("the non-colliding skill should still be staged: %v", err)
+	}
+	if b, _ := os.ReadFile(owned); string(b) != "the project's own skill" {
+		t.Fatalf("project skill overwritten: %q", b)
+	}
+
+	cleanup()
+	if b, err := os.ReadFile(owned); err != nil || string(b) != "the project's own skill" {
+		t.Fatalf("cleanup removed or changed the project skill: %q, %v", b, err)
+	}
+	if status := runGit(t, repo, "status", "--porcelain", "--untracked-files=all"); status != "" {
+		t.Fatalf("git sees changes after staging and cleanup: %q", status)
+	}
+}
+
+func TestStage_ReplacesItsOwnLeftoverFromACrashedRun(t *testing.T) {
+	pluginDir := installedPlugin(t)
+	workdir := t.TempDir()
+	leftover := filepath.Join(workdir, StagedSkillsDir, "noctra-demo-tdd")
+	writeFile(t, filepath.Join(leftover, "SKILL.md"), "stale")
+	writeFile(t, filepath.Join(leftover, stagedMarker), "")
+
+	cleanup, err := Stage(workdir, []string{pluginDir})
+	if err != nil {
+		t.Fatalf("Stage: %v", err)
+	}
+	if b, _ := os.ReadFile(filepath.Join(leftover, "SKILL.md")); string(b) == "stale" {
+		t.Fatal("stale staged copy was not replaced")
+	}
+	cleanup()
+	if _, err := os.Stat(leftover); !os.IsNotExist(err) {
+		t.Errorf("leftover should be cleaned up (err=%v)", err)
 	}
 }
