@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"github.com/onelastcommit/noctra/internal/plugins"
 )
 
 func TestMask(t *testing.T) {
@@ -335,15 +333,22 @@ func TestEnvValues_ToMapIncludesPluginPacks(t *testing.T) {
 	}
 }
 
-func TestChooseOptionalPacks_SkippedWhenCatalogueHasNone(t *testing.T) {
-	if len(plugins.OptionalPacks()) > 0 {
-		t.Skip("catalogue has optional packs; covered by TestChoosePluginPacks_OptionalPacks")
+func TestChoosePluginPacks_OptionalPacks(t *testing.T) {
+	cases := []struct {
+		name, input, existing, want string
+	}{
+		{"adds optional packs", "1\nsecurity, content\n", "", "engineering,frontend,security,content"},
+		{"blank adds none", "2\n\n", "", "engineering,backend"},
+		{"unknown pack re-prompts", "4\nmobile\nsecurity\n", "", "engineering,security"},
+		{"keeps existing on enter", "\n\n", "engineering,frontend,security", "engineering,frontend,security"},
+		{"no plugins skips the optional question", "5\nsecurity\n", "", "none"},
 	}
-	w := newWizardWithInput("leftover\n")
-	if got := w.chooseOptionalPacks(""); got != "" {
-		t.Fatalf("got %q, want no optional packs", got)
-	}
-	if got := w.readLine(""); got != "leftover" {
-		t.Fatalf("the skipped question consumed input; next line = %q", got)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			w := newWizardWithInput(c.input)
+			if got := w.choosePluginPacks(c.existing); got != c.want {
+				t.Errorf("got %q, want %q", got, c.want)
+			}
+		})
 	}
 }

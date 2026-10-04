@@ -1098,7 +1098,8 @@ MAIN_BRANCH="%s"
 AGENT_BACKEND="%s"
 
 # Curated agent plugins loaded into every run, pinned to exact commits:
-# "engineering" plus "frontend" and/or "backend", or "none".
+# "engineering" plus any of "frontend", "backend", "security", "content",
+# or "none".
 AGENT_PLUGIN_PACKS="%s"
 
 MAX_CONCURRENT="%s"

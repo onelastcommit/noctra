@@ -52,7 +52,19 @@ const (
 	impeccableCommit  = "e103efe779e2dd01274dabae83531fef00bf2563"
 	tasteSkillCommit  = "ce26fc25c0e5e8cab638f883de62d9a86ee5e45b"
 	gsapSkillsCommit  = "aed9cfd3277740755f6bfc1155c7aa645403b760"
+	anthropicCommit   = "8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4"
+	vercelCommit      = "063bee94c3f4df8453406c830b0a7df0f2860278"
+	trailOfBitsCommit = "82fe8226252622fa807643bdca1710901198553a"
+	marketingCommit   = "dda3841f0b294e01e93b1541486beefbfab0915e"
+	humanizerCommit   = "225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8"
 )
+
+var playwright = Requirement{
+	Name: "Python Playwright with Chromium",
+	Command: []string{"python3", "-c",
+		"from playwright.sync_api import sync_playwright\nwith sync_playwright() as p:\n    p.chromium.launch().close()"},
+	Hint: "install it with `pip install playwright && python3 -m playwright install --with-deps chromium`",
+}
 
 var catalog = []Pack{
 	{
@@ -109,7 +121,7 @@ var catalog = []Pack{
 	},
 	{
 		Name:        "frontend",
-		Description: "design direction and craft, anti-template UI, GSAP motion",
+		Description: "design direction and craft, anti-template UI, GSAP motion, React performance, UI checks in a real browser",
 		Plugins: []Plugin{
 			{
 				Name:    "impeccable",
@@ -137,6 +149,58 @@ var catalog = []Pack{
 					{Path: "skills/gsap-react"},
 					{Path: "skills/gsap-performance"},
 				},
+			},
+			{
+				Name:    "anthropic-skills",
+				Repo:    "anthropics/skills",
+				Commit:  anthropicCommit,
+				Licence: "Apache-2.0",
+				Skills:  []Skill{{Path: "skills/webapp-testing", Requires: []Requirement{playwright}}},
+			},
+			{
+				Name:    "vercel-agent-skills",
+				Repo:    "vercel-labs/agent-skills",
+				Commit:  vercelCommit,
+				Licence: "MIT",
+				Skills:  []Skill{{Path: "skills/react-best-practices", Exclude: []string{"AGENTS.md", "README.md"}}},
+			},
+		},
+	},
+	{
+		Name:        "security",
+		Description: "security review of the diff, dangerous APIs and unsafe defaults",
+		Optional:    true,
+		Plugins: []Plugin{
+			{
+				Name:    "trailofbits-skills",
+				Repo:    "trailofbits/skills",
+				Commit:  trailOfBitsCommit,
+				Licence: "CC-BY-SA-4.0",
+				Skills: []Skill{
+					{Path: "plugins/differential-review/skills/differential-review", Exclude: []string{"agents", "assets"}},
+					{Path: "plugins/sharp-edges/skills/sharp-edges", Exclude: []string{"agents", "assets"}},
+				},
+			},
+		},
+	},
+	{
+		Name:        "content",
+		Description: "user-facing copy that converts and reads like a person wrote it",
+		Optional:    true,
+		Plugins: []Plugin{
+			{
+				Name:    "marketingskills",
+				Repo:    "coreyhaines31/marketingskills",
+				Commit:  marketingCommit,
+				Licence: "MIT",
+				Skills:  []Skill{{Path: "skills/copywriting", Exclude: []string{"evals"}}},
+			},
+			{
+				Name:    "humanizer",
+				Repo:    "blader/humanizer",
+				Commit:  humanizerCommit,
+				Licence: "MIT",
+				Skills:  []Skill{{Path: ".", Name: "humanizer", Only: []string{"SKILL.md"}}},
 			},
 		},
 	},

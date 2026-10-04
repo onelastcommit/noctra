@@ -175,3 +175,40 @@ func TestStackPacksAreNotOptional(t *testing.T) {
 		t.Error("an unknown pack is not optional")
 	}
 }
+
+func TestOptionalPacks(t *testing.T) {
+	var got []string
+	for _, p := range OptionalPacks() {
+		got = append(got, p.Name)
+	}
+	if !slices.Equal(got, []string{"security", "content"}) {
+		t.Fatalf("optional packs = %v", got)
+	}
+}
+
+func TestResolve_OptionalPackAloneStillAddsBase(t *testing.T) {
+	got, err := Resolve([]string{"security"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Contains(names(got), "superpowers") || !slices.Contains(names(got), "trailofbits-skills") {
+		t.Fatalf("got %v", names(got))
+	}
+}
+
+func TestCatalog_RuntimeSkillsDeclareRequirements(t *testing.T) {
+	for _, pack := range Catalog() {
+		for _, p := range pack.Plugins {
+			for _, s := range p.Skills {
+				for _, r := range s.Requires {
+					if r.Name == "" || len(r.Command) == 0 || r.Hint == "" {
+						t.Errorf("%s/%s has an incomplete requirement %+v", p.Name, s.DirName(), r)
+					}
+				}
+				if s.DirName() == "webapp-testing" && len(s.Requires) == 0 {
+					t.Error("webapp-testing must be gated on Playwright")
+				}
+			}
+		}
+	}
+}
