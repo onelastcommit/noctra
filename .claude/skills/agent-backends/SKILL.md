@@ -22,3 +22,19 @@ A new backend implements `Backend`, registers its name in `agent.New`, and adds 
 - **Claude:** token-capped runs stream `--output-format stream-json`; see the [`sweeps`](../sweeps/SKILL.md) skill for `runCapped` and cost estimation on abort.
 
 The model a run used is read back per backend for PR footers; the [`naming`](../naming/SKILL.md) skill covers where each backend's model comes from.
+
+## Plugins
+
+`AGENT_PLUGIN_PACKS` loads curated skills into every run (`internal/plugins`). `noctra setup` installs them right after writing `.env` (`setup.setUpPlugins`), `Pipeline.installPlugins` re-checks them at every start (instant when nothing changed), and `p.runAgent` puts their directories in `RunOptions.PluginDirs`, so a backend only decides how to deliver them:
+
+- **Claude:** one `--plugin-dir <dir>` per plugin, before `-p`, in both `claudeArgs` and `claudeStreamArgs`. Skills appear namespaced as `noctra-<plugin>:<skill>`.
+- **Codex, Copilot, Antigravity:** `defer stageSkills(opts)()` at the top of `Run` copies the skills into the worktree's `.agents/skills/` and removes them when the run ends.
+
+A new backend must do one of the two; if it reads neither, its runs silently get no skills. Catalogue rules:
+
+- Pin a full SHA and list skills explicitly. A skill at a repo's root sets `Name` and `Only` (humanizer).
+- Take only self-contained skills: no `../` references, no `${CLAUDE_PLUGIN_ROOT}`, no instructions fetched from a moving branch at run time (Vercel's Web Design Guidelines was deferred for this).
+- Leave out anything that waits for a human or downloads code at run time. impeccable ships without its `scripts/` launcher; its skill falls back to reading project files.
+- A skill that drives a runtime declares `Requires` (webapp-testing needs Python Playwright with Chromium), so a host without it gets a warning instead of an agent installing it mid-run.
+- Exclude files a coding agent could mistake for repository instructions, such as an `AGENTS.md` inside a skill folder.
+- Packs that don't depend on the stack (`security`, `content`) are `Optional`; the wizard asks about them separately.

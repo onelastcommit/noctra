@@ -13,6 +13,7 @@ import (
 	"github.com/onelastcommit/noctra/internal/config"
 	"github.com/onelastcommit/noctra/internal/ghauth"
 	"github.com/onelastcommit/noctra/internal/linear"
+	"github.com/onelastcommit/noctra/internal/plugins"
 )
 
 type check struct {
@@ -93,6 +94,7 @@ func gather(scriptDir string) []check {
 		checks = append(checks, checkLinearKey(cfg))
 		checks = append(checks, checkRepos(cfg))
 		checks = append(checks, checkDashboard(cfg))
+		checks = append(checks, checkPlugins(cfg))
 	}
 
 	checks = append(checks, check{
@@ -288,6 +290,42 @@ func checkDashboard(cfg *config.Config) check {
 		ok:     true,
 		detail: detail,
 	}
+}
+
+func checkPlugins(cfg *config.Config) check {
+	wanted, err := plugins.Resolve(cfg.PluginPacks, cfg.PluginsExtra)
+	if err != nil {
+		return check{name: "agent plugins", detail: err.Error(), hint: "fix AGENT_PLUGIN_PACKS / AGENT_PLUGINS_EXTRA in .env"}
+	}
+	if len(wanted) == 0 {
+		return check{name: "agent plugins", ok: true, detail: "disabled (set AGENT_PLUGIN_PACKS or run `noctra setup`)"}
+	}
+	wanted, unmet := plugins.CheckRequirements(context.Background(), wanted)
+	if len(unmet) > 0 {
+		var hints []string
+		for _, u := range unmet {
+			hints = append(hints, fmt.Sprintf("%s: %s", u.Skill, u.Requirement.Hint))
+		}
+		return check{
+			name:   "agent plugins",
+			ok:     true,
+			detail: fmt.Sprintf("%s left out for a missing dependency; runs continue without them. Fix: %s", strings.Join(plugins.SkillNames(unmet), ", "), strings.Join(hints, "; ")),
+		}
+	}
+	var missing []string
+	for _, p := range wanted {
+		if !plugins.IsInstalled(cfg.PluginsDir, p) {
+			missing = append(missing, p.Name)
+		}
+	}
+	if len(missing) > 0 {
+		return check{
+			name:   "agent plugins",
+			ok:     true,
+			detail: fmt.Sprintf("%d of %d not fetched yet: %s (fetched on next start)", len(missing), len(wanted), strings.Join(missing, ", ")),
+		}
+	}
+	return check{name: "agent plugins", ok: true, detail: fmt.Sprintf("%d plugins pinned in %s", len(wanted), cfg.PluginsDir)}
 }
 
 func checkRepos(cfg *config.Config) check {

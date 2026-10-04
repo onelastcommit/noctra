@@ -71,7 +71,8 @@ ENV REPOS_BASE=/data/repos \
     LOG_DIR=/data/logs \
     STATE_DB=/data/state.db \
     STATE_FILE=/data/state.json \
-    GITHUB_AUTH_DIR=/data/github
+    GITHUB_AUTH_DIR=/data/github \
+    PLUGINS_DIR=/data/plugins
 WORKDIR /data
 VOLUME /data
 

@@ -20,6 +20,7 @@ import (
 	"github.com/onelastcommit/noctra/internal/linear"
 	"github.com/onelastcommit/noctra/internal/linearclient"
 	"github.com/onelastcommit/noctra/internal/notify"
+	"github.com/onelastcommit/noctra/internal/plugins"
 	"github.com/onelastcommit/noctra/internal/repo"
 	"github.com/onelastcommit/noctra/internal/review"
 	"github.com/onelastcommit/noctra/internal/selfupdate"
@@ -41,6 +42,10 @@ type Pipeline struct {
 	review   *review.Gate
 	agent    agent.Backend
 	states   linear.StateIDs
+
+	plugins        []plugins.Installed
+	pluginFailures int
+	pluginSkipped  []string
 
 	labelID string
 
@@ -242,6 +247,7 @@ func (p *Pipeline) Run(ctx context.Context) error {
 	}
 
 	p.startupCleanup(ctx)
+	p.installPlugins(ctx)
 	p.banner()
 	if p.cfg.TriggerMode == "label" {
 		p.notifier.Send(ctx, fmt.Sprintf("🌙 *Noctra started*\nWatching label \"%s\" for %s tickets",
@@ -642,6 +648,7 @@ func englishLabel(variant string) string {
 
 func (p *Pipeline) runAgent(ctx context.Context, backend agent.Backend, opts agent.RunOptions) (agent.Usage, error) {
 	opts.Prompt += agent.LanguageSection(p.cfg.EnglishVariant)
+	opts.PluginDirs = p.pluginDirs()
 	return backend.Run(ctx, opts)
 }
 
@@ -773,6 +780,7 @@ func (p *Pipeline) banner() {
 		fmt.Printf("   Watching:       %q column\n", p.cfg.TriggerState)
 	}
 	fmt.Printf("   Agent:          %s\n", agentMode)
+	fmt.Printf("   Plugins:        %s\n", pluginSummary(p.cfg.PluginPacks, p.plugins, p.pluginFailures, p.pluginSkipped))
 	fmt.Printf("   Language:       %s\n", englishLabel(p.cfg.EnglishVariant))
 	fmt.Printf("   Review:         %s\n", reviewMode)
 	fmt.Printf("   Auto-iterate:   %s\n", autoIterMode)

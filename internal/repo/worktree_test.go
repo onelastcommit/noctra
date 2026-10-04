@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -421,5 +422,49 @@ func TestCreateWorktreeWithBranch_OverUnregisteredLeftoverDir(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(wt.Path, "node_modules")); !os.IsNotExist(err) {
 		t.Errorf("leftover contents survived: %v", err)
+	}
+}
+
+func TestCreateWorktree_HidesStagedAgentSkillsFromGit(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	repo := t.TempDir()
+	mustGit := func(dir string, args ...string) string {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, string(out))
+		}
+		return strings.TrimSpace(string(out))
+	}
+	mustGit(repo, "init", "-b", "main", "--quiet")
+	mustGit(repo, "config", "user.email", "t@t")
+	mustGit(repo, "config", "user.name", "T")
+	mustGit(repo, "config", "commit.gpgsign", "false")
+	mustGit(repo, "remote", "add", "origin", repo)
+	if err := os.WriteFile(filepath.Join(repo, "README.md"), []byte("init"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	mustGit(repo, "add", "-A")
+	mustGit(repo, "commit", "-m", "init", "--quiet")
+	mustGit(repo, "fetch", "origin", "--quiet")
+
+	wt, err := CreateWorktree(context.Background(), t.TempDir(), "ENG-1", repo, "main")
+	if err != nil {
+		t.Fatalf("CreateWorktree: %v", err)
+	}
+	staged := filepath.Join(wt.Path, ".agents", "skills", "noctra-superpowers-tdd")
+	if err := os.MkdirAll(staged, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(staged, "SKILL.md"), []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if status := mustGit(wt.Path, "status", "--porcelain", "--untracked-files=all"); status != "" {
+		t.Fatalf("staged skills visible to git in the worktree: %q", status)
 	}
 }

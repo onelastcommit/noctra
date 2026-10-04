@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/onelastcommit/noctra/internal/config"
 	"github.com/onelastcommit/noctra/internal/linear"
 	"github.com/onelastcommit/noctra/internal/notify"
+	"github.com/onelastcommit/noctra/internal/plugins"
 	"github.com/onelastcommit/noctra/internal/sweep"
 )
 
@@ -47,6 +49,9 @@ func Run(scriptDir string) error {
 	fmt.Println()
 
 	w.printCLIStatus(agentBackend)
+	fmt.Println()
+
+	pluginPacks := w.choosePluginPacks(existingEnv["AGENT_PLUGIN_PACKS"])
 	fmt.Println()
 
 	fmt.Println("─── Linear ───")
@@ -270,6 +275,7 @@ func Run(scriptDir string) error {
 		fmt.Printf("  Linear identity       = Noctra app (actor=app)\n")
 	}
 	fmt.Printf("  AGENT_BACKEND         = %s\n", agentBackend)
+	fmt.Printf("  AGENT_PLUGIN_PACKS    = %s\n", pluginPacks)
 	fmt.Printf("  TRIGGER_MODE          = %s\n", triggerMode)
 	if triggerMode == "label" {
 		fmt.Printf("  TRIGGER_LABEL         = %s\n", triggerLabel)
@@ -357,6 +363,7 @@ func Run(scriptDir string) error {
 		oauthClientSecret: oauthClientSecret,
 		clearOAuth:        clearOAuth,
 		agentBackend:      agentBackend,
+		pluginPacks:       pluginPacks,
 		triggerMode:       triggerMode,
 		trigger:           trigger,
 		triggerLabel:      triggerLabel,
@@ -400,6 +407,7 @@ func Run(scriptDir string) error {
 	}
 	fmt.Println()
 	fmt.Printf("✅ Wrote %s\n", envFile)
+	setUpPlugins(scriptDir)
 	fmt.Println("ℹ️  Repos are routed via each Linear project's `Repo: owner/name`")
 	fmt.Println("   directive. Add it to your project descriptions.")
 	fmt.Println()
@@ -637,6 +645,128 @@ func (w *wizard) chooseEngine(existing string) string {
 	}
 }
 
+var pluginChoices = []struct {
+	label string
+	packs string
+}{
+	{"Web frontend      (engineering + frontend)", "engineering,frontend"},
+	{"Backend / APIs    (engineering + backend)", "engineering,backend"},
+	{"Full-stack        (engineering + frontend + backend)", "engineering,frontend,backend"},
+	{"Something else    (engineering only)", "engineering"},
+	{"No plugins", plugins.NoPacks},
+}
+
+func (w *wizard) choosePluginPacks(existing string) string {
+	stack, optional := stackPacks(existing), optionalPacks(existing)
+	if stack == "" && optional != "" {
+		stack = plugins.BasePack
+	}
+	base := w.chooseStackPacks(stack)
+	if base == plugins.NoPacks {
+		return base
+	}
+	if chosen := w.chooseOptionalPacks(optional); chosen != "" {
+		return base + "," + chosen
+	}
+	return base
+}
+
+func splitPacks(s string) []string {
+	var out []string
+	for _, p := range strings.Split(strings.ToLower(s), ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+func stackPacks(existing string) string {
+	var out []string
+	for _, p := range splitPacks(existing) {
+		if !plugins.IsOptional(p) {
+			out = append(out, p)
+		}
+	}
+	return strings.Join(out, ",")
+}
+
+func optionalPacks(existing string) string {
+	var out []string
+	for _, p := range splitPacks(existing) {
+		if plugins.IsOptional(p) {
+			out = append(out, p)
+		}
+	}
+	return strings.Join(out, ",")
+}
+
+func (w *wizard) chooseOptionalPacks(existing string) string {
+	optional := plugins.OptionalPacks()
+	if len(optional) == 0 {
+		return ""
+	}
+	var names []string
+	fmt.Println("Optional packs, added on top (comma-separated, blank for none):")
+	for _, p := range optional {
+		fmt.Printf("  - %-10s %s\n", p.Name, p.Description)
+		names = append(names, p.Name)
+	}
+	for {
+		s := w.askEx("Optional packs", askOpts{existing: existing})
+		if w.eof {
+			return existing
+		}
+		var chosen, unknown []string
+		for _, p := range splitPacks(s) {
+			switch {
+			case slices.Contains(names, p):
+				if !slices.Contains(chosen, p) {
+					chosen = append(chosen, p)
+				}
+			case p == plugins.NoPacks:
+			default:
+				unknown = append(unknown, p)
+			}
+		}
+		if len(unknown) == 0 {
+			return strings.Join(chosen, ",")
+		}
+		fmt.Printf("  Unknown pack(s): %s. Choose from: %s.\n", strings.Join(unknown, ", "), strings.Join(names, ", "))
+	}
+}
+
+func (w *wizard) chooseStackPacks(existing string) string {
+	fmt.Println("What do you mostly build? Noctra adds curated, commit-pinned agent plugins")
+	fmt.Println("(TDD, debugging, verification, design craft…) to every run, on any backend.")
+	fallback := strconv.Itoa(len(pluginChoices))
+	for i, c := range pluginChoices {
+		fmt.Printf("  %d) %s\n", i+1, c.label)
+		if samePacks(c.packs, existing) {
+			fallback = strconv.Itoa(i + 1)
+		}
+	}
+	for {
+		s := w.askEx("Choose", askOpts{fallback: fallback})
+		if w.eof {
+			s = fallback
+		}
+		if n, err := strconv.Atoi(s); err == nil && n >= 1 && n <= len(pluginChoices) {
+			return pluginChoices[n-1].packs
+		}
+		fmt.Printf("  Enter a number from 1 to %d.\n", len(pluginChoices))
+	}
+}
+
+func samePacks(a, b string) bool {
+	norm := func(s string) []string {
+		out := splitPacks(s)
+		slices.Sort(out)
+		return out
+	}
+	return slices.Equal(norm(a), norm(b)) && len(norm(a)) > 0
+}
+
 func (w *wizard) chooseGeminiMode(existing string) string {
 	fmt.Println("Gemini review mode:")
 	fmt.Println("  1) API — uses GEMINI_API_KEY from Google AI Studio")
@@ -855,7 +985,7 @@ type envValues struct {
 	linearKey, team                              string
 	oauthClientID, oauthClientSecret             string
 	clearOAuth                                   bool
-	agentBackend                                 string
+	agentBackend, pluginPacks                    string
 	triggerMode, trigger, triggerLabel, review   string
 	mainBranch, repoPath                         string
 	concurrency, dispatches, retries, timeoutMin string
@@ -873,6 +1003,7 @@ func (v envValues) toMap() map[string]string {
 		"LINEAR_API_KEY":        v.linearKey,
 		"LINEAR_TEAM_KEY":       v.team,
 		"AGENT_BACKEND":         v.agentBackend,
+		"AGENT_PLUGIN_PACKS":    v.pluginPacks,
 		"TRIGGER_MODE":          v.triggerMode,
 		"IN_REVIEW_STATE":       v.review,
 		"MAIN_BRANCH":           v.mainBranch,
@@ -970,6 +1101,11 @@ MAIN_BRANCH="%s"
 # antigravity requires the Antigravity CLI (agy) on PATH + a one-time 'agy' login (Google AI Pro).
 AGENT_BACKEND="%s"
 
+# Curated agent plugins loaded into every run, pinned to exact commits:
+# "engineering" plus any of "frontend", "backend", "security", "content",
+# or "none".
+AGENT_PLUGIN_PACKS="%s"
+
 MAX_CONCURRENT="%s"
 POLL_INTERVAL="30"
 USE_AGENT_TEAMS="false"
@@ -1036,6 +1172,7 @@ DASHBOARD_TOKEN="%s"
 		v.linearKey, v.team, oauthLines, triggerLines, v.review,
 		repoPathLine, v.mainBranch,
 		v.agentBackend,
+		v.pluginPacks,
 		v.concurrency,
 		v.dispatches, v.retries, v.timeoutMin,
 		v.tgEnabled, v.tgToken, v.tgChat, v.verboseNotif,

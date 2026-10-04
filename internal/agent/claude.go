@@ -39,22 +39,32 @@ func (b claudeBackend) Run(ctx context.Context, opts RunOptions) (Usage, error) 
 }
 
 func claudeArgs(opts RunOptions) []string {
-	return []string{
+	args := []string{
 		"--dangerously-skip-permissions",
 		"--print",
 		"--output-format", "json",
-		"-p", opts.Prompt,
 	}
+	args = append(args, claudePluginArgs(opts)...)
+	return append(args, "-p", opts.Prompt)
 }
 
 func claudeStreamArgs(opts RunOptions) []string {
-	return []string{
+	args := []string{
 		"--dangerously-skip-permissions",
 		"--print",
 		"--output-format", "stream-json",
 		"--verbose",
-		"-p", opts.Prompt,
 	}
+	args = append(args, claudePluginArgs(opts)...)
+	return append(args, "-p", opts.Prompt)
+}
+
+func claudePluginArgs(opts RunOptions) []string {
+	args := make([]string, 0, 2*len(opts.PluginDirs))
+	for _, dir := range opts.PluginDirs {
+		args = append(args, "--plugin-dir", dir)
+	}
+	return args
 }
 
 type claudeStreamEvent struct {

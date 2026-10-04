@@ -27,6 +27,30 @@ State and label names are case-sensitive. Repos are routed by each Linear projec
 
 To post on Linear as an app rather than as you, set `LINEAR_OAUTH_CLIENT_ID` and `LINEAR_OAUTH_CLIENT_SECRET`; Noctra mints and renews the token itself and falls back to `LINEAR_API_KEY` if it fails.
 
+## Agent plugins
+
+```env
+AGENT_PLUGIN_PACKS=engineering,frontend,security
+AGENT_PLUGINS_EXTRA=          # owner/repo@<commit SHA>, at your own risk
+```
+
+The wizard asks what you mostly build, then which optional packs to add. Every agent run then gets those skills, whichever backend you use:
+
+| Pack | Skills |
+|------|--------|
+| `engineering` (always on with any pack) | superpowers' TDD, systematic debugging, verification-before-completion and receiving-code-review; agent-skills' code simplification; ponytail |
+| `frontend` | impeccable, taste-skill, GSAP (core, timeline, ScrollTrigger, React, performance), Vercel's React best practices, Anthropic's webapp-testing |
+| `backend` | agent-skills' API and interface design; Matt Pocock's codebase design |
+| `security` (optional) | Trail of Bits' differential review and sharp edges |
+| `content` (optional) | Corey Haines' copywriting; humanizer |
+
+Each plugin is pinned to an exact upstream commit. `noctra setup` downloads your packs into `~/.noctra/plugins` as soon as you choose them, and every start re-checks them, so editing `.env` by hand works too. A failed download never blocks a ticket. Only skills are loaded. Hooks, commands and anything else in a plugin are left out, and so are skills that wait for a human (brainstorming, planning). The startup banner and `noctra doctor` show what is active.
+
+- **webapp-testing** lets the agent check a UI change in a real browser during the run. It needs Python Playwright with Chromium (`pip install playwright && python3 -m playwright install --with-deps chromium`). Without them that one skill is left out with a warning, and everything else still loads.
+- **humanizer** helps with user-facing copy the ticket asks for. It does not shape Noctra's own output: commit messages and the PR title, framing and footer are written by Noctra itself, and only the PR's "What was implemented" summary comes from the agent.
+
+**Licences.** Skills are fetched from their upstream repositories on your own machine; Noctra never redistributes them. Each plugin keeps its upstream licence file, and the copies placed in a worktree for a run are git-excluded, so they can't end up in a PR.
+
 ## Cost and safety caps
 
 | Variable | Default | |

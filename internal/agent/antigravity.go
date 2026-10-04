@@ -13,6 +13,7 @@ func (antigravityBackend) CLI() string      { return "agy" }
 func (antigravityBackend) CoAuthor() string { return "Antigravity <noreply@google.com>" }
 
 func (b antigravityBackend) Run(ctx context.Context, opts RunOptions) (Usage, error) {
+	defer stageSkills(opts)()
 	out, err := runCLI(ctx, b.CLI(), antigravityArgs(opts), nil, opts)
 	return ParseUsage(out), err
 }

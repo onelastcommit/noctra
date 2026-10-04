@@ -13,6 +13,7 @@ func (codexBackend) CLI() string      { return "codex" }
 func (codexBackend) CoAuthor() string { return "Codex <noreply@openai.com>" }
 
 func (b codexBackend) Run(ctx context.Context, opts RunOptions) (Usage, error) {
+	defer stageSkills(opts)()
 	out, err := runCLI(ctx, b.CLI(), codexArgs(opts), nil, opts)
 	usage := ParseUsage(out)
 	usage.Model = codexModel(out)
