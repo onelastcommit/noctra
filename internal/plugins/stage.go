@@ -1,12 +1,14 @@
 package plugins
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 )
 
 const (
@@ -14,6 +16,7 @@ const (
 	stagedSkillPrefix   = "noctra-"
 	StagedSkillsExclude = "/" + StagedSkillsDir + "/" + stagedSkillPrefix + "*/"
 	stagedMarker        = ".noctra-staged"
+	stageCheckTimeout   = time.Minute
 )
 
 func StagedSkillName(pluginDir, skill string) string {
@@ -42,6 +45,10 @@ func Stage(workdir string, pluginDirs []string) (func(), error) {
 		}
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), stageCheckTimeout)
+	defer cancel()
+	checkVisible := insideWorkTree(ctx, workdir)
+
 	var errs []error
 	for _, pluginDir := range pluginDirs {
 		skills, err := listSkills(pluginDir)
@@ -69,9 +76,36 @@ func Stage(workdir string, pluginDirs []string) (func(), error) {
 			if err := os.WriteFile(filepath.Join(dst, stagedMarker), nil, 0o644); err != nil {
 				errs = append(errs, err)
 			}
+			if checkVisible {
+				if err := ensureHiddenFromGit(ctx, workdir, dst); err != nil {
+					_ = os.RemoveAll(dst)
+					staged = staged[:len(staged)-1]
+					errs = append(errs, err)
+				}
+			}
 		}
 	}
 	return cleanup, errors.Join(errs...)
+}
+
+func insideWorkTree(ctx context.Context, dir string) bool {
+	out, err := git(ctx, dir, "rev-parse", "--is-inside-work-tree")
+	return err == nil && strings.TrimSpace(out) == "true"
+}
+
+func ensureHiddenFromGit(ctx context.Context, workdir, dst string) error {
+	rel, err := filepath.Rel(workdir, dst)
+	if err != nil {
+		return err
+	}
+	out, err := git(ctx, workdir, "ls-files", "--others", "--exclude-standard", "--", filepath.ToSlash(rel))
+	if err != nil {
+		return fmt.Errorf("could not confirm git ignores %s, so it wasn't staged: %w", rel, err)
+	}
+	if strings.TrimSpace(out) != "" {
+		return fmt.Errorf("%s would be visible to git (a .gitignore re-includes it), so it wasn't staged", rel)
+	}
+	return nil
 }
 
 func exists(path string) bool {

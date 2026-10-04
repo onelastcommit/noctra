@@ -157,3 +157,51 @@ func TestStage_ReplacesItsOwnLeftoverFromACrashedRun(t *testing.T) {
 		t.Errorf("leftover should be cleaned up (err=%v)", err)
 	}
 }
+
+func TestStage_RefusesWhenARepositoryGitignoreReincludesStagedSkills(t *testing.T) {
+	requireGit(t)
+	pluginDir := installedPlugin(t)
+	for _, negation := range []string{"!.agents/skills/**", "!.agents/skills/*/"} {
+		t.Run(negation, func(t *testing.T) {
+			repo := t.TempDir()
+			runGit(t, repo, "init", "-b", "main", "--quiet")
+			writeFile(t, filepath.Join(repo, ".gitignore"), ".agents/*\n!.agents/skills/\n"+negation+"\n")
+			if err := ExcludeStaged(context.Background(), repo); err != nil {
+				t.Fatal(err)
+			}
+
+			cleanup, err := Stage(repo, []string{pluginDir})
+			defer cleanup()
+			if err == nil || !strings.Contains(err.Error(), "would be visible to git") {
+				t.Fatalf("want a visibility error, got %v", err)
+			}
+			entries, _ := os.ReadDir(filepath.Join(repo, StagedSkillsDir))
+			if len(entries) != 0 {
+				t.Fatalf("nothing should stay staged where git can see it, found %v", entries)
+			}
+			if status := runGit(t, repo, "status", "--porcelain", "--untracked-files=all"); status != "?? .gitignore" {
+				t.Fatalf("git status = %q", status)
+			}
+		})
+	}
+}
+
+func TestStage_StagesNormallyInAGitRepositoryThatIgnoresThem(t *testing.T) {
+	requireGit(t)
+	pluginDir := installedPlugin(t)
+	repo := t.TempDir()
+	runGit(t, repo, "init", "-b", "main", "--quiet")
+	writeFile(t, filepath.Join(repo, ".gitignore"), ".agents/*\n!.agents/skills/\n")
+	if err := ExcludeStaged(context.Background(), repo); err != nil {
+		t.Fatal(err)
+	}
+
+	cleanup, err := Stage(repo, []string{pluginDir})
+	defer cleanup()
+	if err != nil {
+		t.Fatalf("Stage: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(repo, StagedSkillsDir, "noctra-demo-tdd", "SKILL.md")); err != nil {
+		t.Fatalf("skill not staged: %v", err)
+	}
+}
