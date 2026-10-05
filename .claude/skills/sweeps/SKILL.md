@@ -29,7 +29,7 @@ Precedence, resolved in `scheduler.repoTargets`/`Plan` into `Job.MainBranch` (wh
 1. an `@branch` suffix on the `SWEEP_REPOS` entry (`scheduler.parseSweepRepoRef`);
 2. the matching Linear project's `Branch:` directive (`linear.ListProjects` → `Project.RepoDirective`, matched by `github.ExtractOwnerRepo`; discovery-path repos are keyed off their `origin` via `repo.OriginRemoteOf`);
 3. the repo's GitHub default branch (`origin/HEAD`);
-4. `MAIN_BRANCH`.
+4. `MAIN_BRANCH` for `SWEEP_REPOS` entries; repos found by scanning the clone directory fall back to `main` (`repo.DefaultBranchOf`).
 
 ## Per-run cost guards
 
