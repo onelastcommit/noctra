@@ -62,7 +62,7 @@ func TestTruncateDiffStatBoundsLongStats(t *testing.T) {
 	}
 
 	var b strings.Builder
-	for i := 0; i < 200; i++ {
+	for range 200 {
 		b.WriteString(" internal/pkg/file.go | 3 +--\n")
 	}
 	got := truncateDiffStat(b.String())

@@ -57,10 +57,7 @@ func (p *Pipeline) runSweepLoop(ctx context.Context, wg *sync.WaitGroup) {
 				continue
 			}
 			slog.Debug("sweep: paused, waiting for resume", "reason", reason, "until", until)
-			retryIn := time.Until(until)
-			if retryIn < 10*time.Second {
-				retryIn = 10 * time.Second
-			}
+			retryIn := max(time.Until(until), 10*time.Second)
 			timer := time.NewTimer(retryIn)
 			select {
 			case <-ctx.Done():

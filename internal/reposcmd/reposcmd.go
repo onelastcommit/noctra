@@ -171,7 +171,7 @@ func runAdd(scriptDir string, args []string) error {
 }
 
 func resolveProject(ctx context.Context, projects repoadd.Projects, in *bufio.Scanner, query string) (*linear.Project, error) {
-	for attempt := 0; attempt < maxProjectAttempts; attempt++ {
+	for range maxProjectAttempts {
 		project, ambiguous, err := repoadd.ResolveProject(ctx, projects, query)
 		if err != nil {
 			return nil, err

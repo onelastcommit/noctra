@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -499,12 +500,7 @@ func (c *Config) UsesTicketSource(name string) bool {
 }
 
 func usesSource(sources []string, name string) bool {
-	for _, src := range sources {
-		if src == name {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(sources, name)
 }
 
 func (c *Config) AgentCLI() string {
@@ -555,9 +551,7 @@ func (c *Config) CheckCLIs() (missing []string) {
 
 func AgentCLIs() map[string]string {
 	out := make(map[string]string, len(agentCLIs))
-	for k, v := range agentCLIs {
-		out[k] = v
-	}
+	maps.Copy(out, agentCLIs)
 	return out
 }
 

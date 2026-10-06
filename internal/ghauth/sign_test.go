@@ -58,7 +58,7 @@ func TestSignedHeaders_OmitsInstanceOnLink(t *testing.T) {
 func TestNewNonce_AcceptedByService(t *testing.T) {
 	re := regexp.MustCompile(`^[A-Za-z0-9_-]{16,64}$`)
 	seen := map[string]bool{}
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		n := NewNonce()
 		if !re.MatchString(n) {
 			t.Fatalf("nonce %q would be rejected", n)

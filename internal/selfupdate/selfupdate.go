@@ -57,7 +57,7 @@ func IsNewer(latest, current string) bool {
 	if !ok1 || !ok2 {
 		return false
 	}
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		if lv[i] != cv[i] {
 			return lv[i] > cv[i]
 		}

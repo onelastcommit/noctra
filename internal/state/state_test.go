@@ -67,7 +67,7 @@ func TestUpdate_MultipleCallsAccumulate(t *testing.T) {
 	}
 
 	const prURL = "https://github.com/me/repo/pull/1"
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		if err := s.Update(prURL, func(r *PRState) {
 			r.Iterations++
 		}); err != nil {

@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"regexp"
+	"slices"
 )
 
 type claudeBackend struct{}
@@ -118,7 +119,7 @@ type streamTail struct {
 const streamTailMax = 16 << 10
 
 func (t *streamTail) add(line []byte) {
-	l := append([]byte(nil), line...)
+	l := slices.Clone(line)
 	t.lines = append(t.lines, l)
 	t.size += len(l)
 	for t.size > streamTailMax && len(t.lines) > 1 {

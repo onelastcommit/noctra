@@ -206,7 +206,7 @@ func TestScheduler_PlanRotatesLeadRepoAcrossCycles(t *testing.T) {
 	s := NewScheduler(store, resolver(reposBase), tasks, time.Hour, 1, nil, nil)
 
 	var leads []string
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		jobs := s.Plan(context.Background())
 		if len(jobs) != 1 {
 			t.Fatalf("cycle %d: expected 1 job, got %d", i, len(jobs))

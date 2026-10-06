@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -236,12 +237,7 @@ LINEAR_TEAM_KEY="ENG"
 }
 
 func containsLine(text, line string) bool {
-	for _, l := range splitLines(text) {
-		if l == line {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(splitLines(text), line)
 }
 
 func TestEditEnvFile_RemovesKeysAndKeepsTheRest(t *testing.T) {

@@ -338,10 +338,7 @@ func boundedTail(logFile string, maxBytes int64) string {
 	if size <= 0 {
 		return ""
 	}
-	offset := size - maxBytes
-	if offset < 0 {
-		offset = 0
-	}
+	offset := max(size-maxBytes, 0)
 	return agent.ReadAfter(logFile, offset)
 }
 
