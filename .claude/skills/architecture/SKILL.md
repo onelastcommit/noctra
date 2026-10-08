@@ -11,7 +11,7 @@ Use this playbook before changing Noctra's core code. The invariants below are e
 
 | Package | Purpose |
 |---------|---------|
-| `cmd/noctra` | Entry point + subcommand dispatch (`run` / `setup` / `config` / `repos` / `sweep` / `github` / `git-credential` / `cleanup` / `doctor [--json]` / `update` / `install-service [--start/--force]` / `logs` / `tail` / `start` / `stop` / `restart` / `status` / `completion` / `version`). `start`…`status` are thin `systemctl --user <verb> noctra.service` wrappers; `completion bash\|zsh` is the pure `completionScript`; startup banner; `--help` |
+| `cmd/noctra` | Entry point + subcommand dispatch (`run` / `setup` / `config` / `repos` / `sweep` / `github` / `git-credential` / `cleanup` / `doctor [--json]` / `update` / `install-service [--start/--force]` / `uninstall [--purge]` / `dashboard` / `logs` / `tail` / `start` / `stop` / `restart` / `status` / `completion` / `version`). `start`…`status` are thin `systemctl --user <verb> noctra.service` wrappers; `completion bash\|zsh` is the pure `completionScript`; startup banner; `--help` |
 | `internal/config` | `.env` parser, validated `Config`, `DefaultConfigDir` (`~/.noctra/`) |
 | `internal/configcmd` | `noctra config path\|edit\|get\|set` — atomic, comment-preserving `.env` edits |
 | `internal/source` | Ticket sources behind one interface: Linear, GitHub Issues (`TICKET_SOURCES`), Jira |
@@ -22,7 +22,7 @@ Use this playbook before changing Noctra's core code. The invariants below are e
 | `internal/reposcmd` | `noctra repos add` / `list` — CLI channel over `repoadd` |
 | `internal/agent` | Backends behind `Backend` ([`agent-backends`](../agent-backends/SKILL.md)); shared prompt builders, `BuildFixPrompt`, `BlockedLine`, log_offset, `ExtractSummary`, `ExtractFindingReplies`, pricing |
 | `internal/plugins` | Curated, commit-pinned agent skills ([`agent-backends`](../agent-backends/SKILL.md#plugins)): `Catalog`/`Resolve` (packs from the embedded `catalog.json` + `AGENT_PLUGINS_EXTRA`), `Install` (fetch at the pinned SHA, verify, build a trimmed plugin dir), `Stage` (copy skills into a worktree for non-Claude backends), `ExcludeStaged` |
-| `internal/review` | Optional Gemini review gate. API mode requests JSON (`verdict` + `summary` + line-anchored `findings`); `process.go` posts findings as inline PR comments (`github.PostInlineComments`, each with `NoctraReplyMarker`) and leaves a concise verdict in the PR body. CLI mode / unparseable JSON fall back to the prose verdict |
+| `internal/review` | Optional Gemini review gate. API mode requests JSON (`verdict` + `summary` + line-anchored `findings`); `pipeline/process.go` posts findings as inline PR comments (`github.PostInlineComments`, each with `NoctraReplyMarker`) and the verdict as a separate PR comment. CLI mode / unparseable JSON fall back to the prose verdict |
 | `internal/budget` | Daily token/USD caps (`MAX_DAILY_TOKENS` / `MAX_DAILY_USD`), reset at UTC midnight |
 | `internal/notify` | Fire-and-forget `Notifier` (`Send`/`SendSync`): Telegram, Slack, Discord; `Multi` fans out (`buildNotifier` in `pipeline`). Slack/Discord are on when their webhook URL is non-empty; Telegram keeps `TELEGRAM_ENABLED`. Messages use single-`*` mrkdwn; Discord rewrites to `**x**` and sends `allowed_mentions:{parse:[]}` |
 | `internal/telegram` | Inbound listener: long-poll `getUpdates`, sender auth, dispatcher. `Register` for one-shot commands; `RegisterConversation` for guided flows — while live, plain messages route to it; it ends on completion, `/cancel`, a 5-minute `sessionTTL`, or any other command (which interrupts it and still runs) |
@@ -47,7 +47,7 @@ Agent logs append across attempts. `agent.OffsetBefore` records the file size *b
 
 **Rule:** never scan the full log file to detect failures. That re-detects failures from previous attempts and causes false positives (e.g. a ticket that was rate-limited on attempt 1 would be falsely detected as rate-limited on attempt 2 even when the agent succeeded).
 
-**Where it lives:** `internal/agent/exec.go` (`OffsetBefore`, `ReadAfter`), consumed in `internal/pipeline/process.go` and `internal/pipeline/iterate.go`.
+**Where it lives:** `internal/agent/log.go` (`OffsetBefore`, `ReadAfter`), consumed in `internal/pipeline/process.go` and `internal/pipeline/iterate.go`.
 
 ## Invariant 2: the `noctra/` branch-prefix guardrail
 
@@ -60,7 +60,7 @@ The auto-iterate watcher identifies its own PRs by the `noctra/<id>` branch pref
 
 ## Invariant 3: backend-agnostic `internal/agent` split
 
-Shared agent logic goes in the common code (`exec.go`, `prompt.go`); a backend file holds only its invocation args and rate-limit regex. Details and per-backend quirks: [`agent-backends`](../agent-backends/SKILL.md).
+Shared agent logic goes in the common code (`backend.go`, `log.go`, `prompt.go`); a backend file holds only its invocation args and rate-limit regex. Details and per-backend quirks: [`agent-backends`](../agent-backends/SKILL.md).
 
 ## Invariant 4: cursor semantics
 
@@ -110,7 +110,7 @@ The non-obvious facts that previously lived in comments, kept here so removing t
 | `pipeline/iterate.go` | Every failure path must record the iteration before returning, or the cursor never advances and the same feedback loops forever. Two deliberate exceptions: infra failures (timeout / rate-limit) don't increment — they weren't real attempts — and a shutdown cancellation isn't recorded at all, since it would bump the count and could fire the cap warning. |
 | `lessons/lessons.go` | Lessons come only from the PR branch's own (`--first-parent`, `--no-merges`) commits after `LastPushedSHA` that are neither `[bot]`-authored nor Noctra's. Noctra commits under the host's git identity, so it is recognised by the commit-body lines `Implemented by Noctra` / `Follow-up commit by Noctra` / `Autonomous maintenance by Noctra` (`noctraCommitRe`) — reword those in `pipeline` and Noctra starts learning from itself. A plain `git diff` also swept in everything an "Update branch" merge pulled from main, which is how feature descriptions ended up stored as conventions. |
 | `pipeline/iterate.go` | Push whenever the branch is ahead, not just when the worktree is dirty: the agent sometimes self-commits, and gating on dirtiness alone silently drops those commits (ENG-182). |
-| `pipeline/plan.go` | `hasPendingPlan` takes `p.mu` itself — callers must **not** already hold it. |
+| `pipeline/plan.go` | `hasPendingPlan` reads only the state store and never takes `p.mu`: `pollOnce` calls it while holding the lock. |
 | `pipeline/sweep.go` | A manual sweep deliberately skips `MarkSwept` so an ad-hoc run never shifts the scheduled cadence. |
 | `pipeline/sweep.go` | Both abort paths (timeout, token cap) **do** record the cooldown. A task that aborts will abort again identically, so skipping it would re-burn the full ceiling every cycle; `/sweep --force` is the escape hatch. Their `run_history` status is `aborted`, not `failed` — the run was healthy, we killed it. |
 | `pipeline/sweep.go` | Outcome notifications send on `context.WithoutCancel(ctx)`: `markDone` cancels the task context the instant `processSweepTask` returns, and `notifier.Send` is fire-and-forget, so a plain `ctx` races with its own cancellation. |

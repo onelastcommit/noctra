@@ -59,7 +59,7 @@ Branch: main        (optional — defaults to the repo's default branch)
 
 `Repo:` takes `owner/name` or any git URL (SSH, GitLab and other hosts work). Noctra clones on demand, so nothing needs to be set up in advance. Then drag a ticket into **Next**.
 
-> ⚠️ **The one thing newcomers trip on:** if a ticket's project has no `Repo:` line, the agent has nowhere to work and the ticket bounces back. `REPO_PATH` in `.env` is a single-repo fallback.
+> ⚠️ **The one thing newcomers trip on:** if a ticket's project has no `Repo:` line, the agent has nowhere to work, so Noctra comments on the ticket and skips it. `REPO_PATH` in `.env` is a single-repo fallback.
 
 ## Requirements
 
@@ -73,9 +73,9 @@ Noctra only makes outbound requests, so it needs no open port or webhook.
 ## Ticket flow
 
 ```
-[Next] ──→ [In Progress] ──→ [In Review] ──→ [Done]
-  ↑              │                              (you merge)
-  └── blocked ←──┘
+[Next] ──→ [In Review] ──→ [Done]
+  ↑    │                   (you merge)
+  └────┘ blocked
 ```
 
 If the agent gets stuck it writes `BLOCKED: <reason>`. Noctra posts that on the ticket and moves it back to **Next**; add context and re-queue it (or `/requeue ENG-42 <context>` on Telegram).

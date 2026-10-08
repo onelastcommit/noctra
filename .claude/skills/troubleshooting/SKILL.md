@@ -107,7 +107,7 @@ AGENT_BACKEND=claude
 USE_AGENT_TEAMS=true
 ```
 
-The value must be exactly lowercase `true`. Check the ticket log for the backend run header and use a recent `claude` CLI.
+The value must be a true boolean (`true`, `1`, `yes` or `y`, any case). Check the ticket log for the backend run header and use a recent `claude` CLI.
 
 ## Gemini Review Fails Or Seems Wrong
 
@@ -115,7 +115,7 @@ If every review errors or fails before useful comments appear:
 
 1. Confirm `GEMINI_API_KEY` is set only when the review gate is desired.
 2. Validate the key with a direct API call.
-3. Check `logs/ENG-42-gemini.log` for the raw response.
+3. Check the `--- Gemini review` block at the end of `logs/ENG-42.log` for the raw response.
 4. If the diff is huge, split the ticket or reduce scope.
 
 ```bash
