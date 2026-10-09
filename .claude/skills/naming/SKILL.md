@@ -28,7 +28,7 @@ Every name Noctra writes is read back later by something else: a branch name by 
 
 ## Commit messages and PR titles
 
-- Subject and PR title follow Conventional Commits when the target repo uses them (`repo.UsesConventionalCommits`). The type comes from the agent's release-bump suggestion (`patch` gives `fix`, `minor` gives `feat`, `major` gives `feat!` plus `BREAKING CHANGE`), built by `conventionalSubject`. Otherwise the subject is `feat: implement <id> — <title>` or `<id>: <title>`.
+- Subject and PR title follow Conventional Commits when the target repo uses them (`repo.UsesConventionalCommits`). The type comes from the agent's release-bump suggestion (`patch` gives `fix`, `minor` gives `feat`, `major` gives `feat!` plus `BREAKING CHANGE`), built by `conventionalSubject`. Otherwise the subject is `<id>: <title>`.
 - The body opens with one of three fixed phrases: `Implemented by Noctra`, `Follow-up commit by Noctra`, `Autonomous maintenance by Noctra`. `lessons.noctraCommitRe` matches them to keep Noctra from learning from its own commits, so the phrases stay word for word; anything may follow them.
 - A `Co-authored-by:` trailer names the agent backend (`Backend.CoAuthor`).
 

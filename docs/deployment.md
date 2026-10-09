@@ -15,7 +15,7 @@ Prebuilt archives for linux amd64/arm64/armv7 and macOS amd64/arm64 are on the [
 
 ## Docker
 
-The GHCR image ships `git`, `gh` and every agent CLI.
+The GHCR image ships `git`, `gh` and the `claude`, `codex` and `copilot` agent CLIs (not Antigravity's `agy`).
 
 ```bash
 cp .env.example .env    # fill in LINEAR_API_KEY, AGENT_BACKEND, agent + GitHub keys

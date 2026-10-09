@@ -107,7 +107,7 @@ AGENT_BACKEND=claude
 USE_AGENT_TEAMS=true
 ```
 
-The value must be exactly lowercase `true`. Check the ticket log for the backend run header and use a recent `claude` CLI.
+The value must be `true` (or `1`/`yes`, any case). Check the ticket log for the backend run header and use a recent `claude` CLI.
 
 ## Gemini Review Fails Or Seems Wrong
 
@@ -115,7 +115,7 @@ If every review errors or fails before useful comments appear:
 
 1. Confirm `GEMINI_API_KEY` is set only when the review gate is desired.
 2. Validate the key with a direct API call.
-3. Check `logs/ENG-42-gemini.log` for the raw response.
+3. Check Noctra's service log (`noctra logs`) for the `gemini review` lines; there is no separate Gemini log file.
 4. If the diff is huge, split the ticket or reduce scope.
 
 ```bash
@@ -160,7 +160,7 @@ PR_POLL_INTERVAL=120
 TRUSTED_REVIEWERS=
 ```
 
-Noctra only watches PRs it authored, identified by the `noctra/<id>` branch prefix. It ignores bot feedback unless the bot login is in `TRUSTED_REVIEWERS`. CI failures are keyed by head commit SHA and are acted on once per failing commit.
+Noctra only watches PRs it authored, identified by the `noctra/<id>` branch prefix plus the Noctra marker in the PR body. It ignores bot feedback unless the bot login is in `TRUSTED_REVIEWERS`. CI failures are keyed by head commit SHA and are acted on once per failing commit.
 
 The restart-safe cursor is stored in the SQLite DB at `~/.noctra/state.db` unless `STATE_DB` overrides it. Deeper behaviour is in the [`auto-iterate`](../auto-iterate/SKILL.md) skill.
 
