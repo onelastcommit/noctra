@@ -49,7 +49,10 @@ func CreateWorktree(ctx context.Context, base, identifier, repoPath, mainBranch 
 }
 
 func ResumeWorktree(ctx context.Context, base, identifier, repoPath string) (Worktree, error) {
-	branch := BranchName(identifier)
+	return ResumeWorktreeWithBranch(ctx, base, identifier, repoPath, BranchName(identifier))
+}
+
+func ResumeWorktreeWithBranch(ctx context.Context, base, identifier, repoPath, branch string) (Worktree, error) {
 	wt := filepath.Join(base, identifier)
 
 	defer lockRepo(repoPath)()
