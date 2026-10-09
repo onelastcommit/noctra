@@ -146,7 +146,7 @@ func TestConversation_TTLRefreshesOnEachAnswer(t *testing.T) {
 	registerFlow(d, conv)
 	d.Dispatch(context.Background(), "/flow")
 
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		now = now.Add(sessionTTL - time.Minute)
 		if reply := d.Dispatch(context.Background(), "answer"); strings.Contains(reply, "timed out") {
 			t.Fatalf("answer %d timed out despite arriving inside the TTL", i)

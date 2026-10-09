@@ -16,6 +16,7 @@ import (
 	"github.com/onelastcommit/noctra/internal/config"
 	"github.com/onelastcommit/noctra/internal/ghauth"
 	"github.com/onelastcommit/noctra/internal/github"
+	"slices"
 )
 
 const maxSafeAgentTimeout = 50 * time.Minute
@@ -56,12 +57,7 @@ func printUsage() {
 }
 
 func hasFlag(args []string, flag string) bool {
-	for _, a := range args {
-		if a == flag {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(args, flag)
 }
 
 func flagValue(args []string, flag string) string {

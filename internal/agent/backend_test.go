@@ -143,8 +143,8 @@ func TestTailWorthy_KeepsFailureSignalsDropsConversation(t *testing.T) {
 func TestStreamTail_BoundsSizeKeepingNewest(t *testing.T) {
 	var tail streamTail
 	line := bytes.Repeat([]byte("x"), 1024)
-	for i := 0; i < 100; i++ {
-		tail.add(append([]byte(fmt.Sprintf("%03d-", i)), line...))
+	for i := range 100 {
+		tail.add(append(fmt.Appendf(nil, "%03d-", i), line...))
 	}
 	if tail.size > streamTailMax {
 		t.Errorf("tail size %d exceeds cap %d", tail.size, streamTailMax)

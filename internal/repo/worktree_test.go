@@ -271,7 +271,7 @@ func TestCreateWorktreeWithBranch_ConcurrentSameRepo(t *testing.T) {
 	errs := make(chan error, n)
 	var start sync.WaitGroup
 	start.Add(1)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		go func(i int) {
 			start.Wait()
 			id := fmt.Sprintf("SWEEP-FIXTURE-TASK-%d", i)
@@ -281,7 +281,7 @@ func TestCreateWorktreeWithBranch_ConcurrentSameRepo(t *testing.T) {
 	}
 	start.Done()
 
-	for i := 0; i < n; i++ {
+	for range n {
 		if err := <-errs; err != nil {
 			t.Fatalf("concurrent CreateWorktreeWithBranch failed: %v", err)
 		}
