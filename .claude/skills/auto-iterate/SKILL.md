@@ -11,7 +11,7 @@ With `AUTO_ITERATE_PRS=true` a **second** poll loop runs beside the Linear one, 
 PR poll loop → github.ListNoctraPRs → github.GetPR (comments+reviews+statusCheckRollup)
   → watch.Scan (diff vs state cursor: new feedback OR failing CI on a new head SHA)
   → pipeline.iteratePR (bounded, shares the worker pool + active-set)
-  → repo.ResumeWorktree → [github.CheckLogs for CI] → agent.BuildFixPrompt → agent.Run
+  → repo.ResumeWorktreeWithBranch(PR head branch) → [github.CheckLogs for CI] → agent.BuildFixPrompt → agent.Run
   → commit/push (same branch) → state.Update (advance comment/review/CI cursor + bump iteration count)
 ```
 
