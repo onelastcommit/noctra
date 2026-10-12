@@ -177,6 +177,7 @@ func (p *Pipeline) process(ctx context.Context, issue source.Ticket) {
 	}
 
 	if errors.Is(runErr, agent.ErrTimedOut) {
+		p.chargeUsage(usage, "ticket", id, "", backend)
 		logger.Warn("timed out", "timeout", p.cfg.AgentTimeout)
 		p.bumpFailed(id)
 		p.ticketBackToTrigger(ctx, issue, fmt.Sprintf(
