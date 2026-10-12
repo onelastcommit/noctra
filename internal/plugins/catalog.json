@@ -22,7 +22,7 @@
     },
     "impeccable": {
       "repo": "pbakaus/impeccable",
-      "commit": "ece38d9904b8a619b3f77cab476eacad09c4fb11",
+      "commit": "919dbeba520df760a157fe635be62faae88d58da",
       "licence": "Apache-2.0"
     },
     "marketingskills": {
@@ -37,17 +37,17 @@
     },
     "ponytail": {
       "repo": "DietrichGebert/ponytail",
-      "commit": "c982cd411abb53323c4baa1baa3c2f020b8d0b08",
+      "commit": "9b58c1ffb790c075ca32e70a89cf1d80588f4abf",
       "licence": "MIT"
     },
     "superpowers": {
       "repo": "obra/superpowers",
-      "commit": "8ca22dba9a94f28898bbce59f2537ff4d87c747d",
+      "commit": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
       "licence": "MIT"
     },
     "taste-skill": {
       "repo": "Leonxlnx/taste-skill",
-      "commit": "ce26fc25c0e5e8cab638f883de62d9a86ee5e45b",
+      "commit": "d237dd399d57524945c0c81327da5da19f7a468d",
       "licence": "MIT"
     },
     "trailofbits-skills": {
