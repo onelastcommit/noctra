@@ -30,11 +30,12 @@ func codexModel(output string) string {
 }
 
 func codexArgs(opts RunOptions) []string {
-	return []string{
-		"exec",
-		"--dangerously-bypass-approvals-and-sandbox",
-		opts.Prompt,
+	args := []string{"exec", "--dangerously-bypass-approvals-and-sandbox"}
+	if opts.NoTools {
+		args = []string{"exec", "--sandbox", "read-only", "--skip-git-repo-check"}
 	}
+	args = append(args, modelArgs("--model", opts)...)
+	return append(args, opts.Prompt)
 }
 
 var codexRateLimitRe = regexp.MustCompile(`(?i)rate.?limit|usage.?limit|quota|exceeded.*limit|too many requests`)

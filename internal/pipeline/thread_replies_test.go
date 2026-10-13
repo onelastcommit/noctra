@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/onelastcommit/noctra/internal/agent"
+	"github.com/onelastcommit/noctra/internal/config"
 	"github.com/onelastcommit/noctra/internal/watch"
 )
 
@@ -84,5 +85,26 @@ func TestNothingToRespondTo(t *testing.T) {
 	withCI.CIFailure = &watch.CIFailure{SHA: "abc"}
 	if nothingToRespondTo(withCI, silent) {
 		t.Error("a CI failure is always worth reporting")
+	}
+}
+
+func TestShouldTriage(t *testing.T) {
+	on := &Pipeline{cfg: &config.Config{PRTriage: true}}
+	off := &Pipeline{cfg: &config.Config{PRTriage: false}}
+	feedback := watch.PRChanges{Events: []watch.Event{{Type: watch.EventComment, Body: "status"}}}
+	withCI := feedback
+	withCI.CIFailure = &watch.CIFailure{SHA: "abc"}
+
+	if !on.shouldTriage(feedback) {
+		t.Error("review activity alone should be triaged")
+	}
+	if on.shouldTriage(withCI) {
+		t.Error("a CI failure always engages, so it must not be triaged")
+	}
+	if on.shouldTriage(watch.PRChanges{}) {
+		t.Error("nothing to triage")
+	}
+	if off.shouldTriage(feedback) {
+		t.Error("PR_TRIAGE=false turns it off")
 	}
 }

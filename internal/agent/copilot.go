@@ -53,12 +53,13 @@ func copilotEnv(ctx context.Context) []string {
 }
 
 func copilotArgs(opts RunOptions) []string {
-	return []string{
-		"--allow-all-tools",
-		"--no-ask-user",
-		"--output-format", "json",
-		"-p", opts.Prompt,
+	var args []string
+	if !opts.NoTools {
+		args = append(args, "--allow-all-tools")
 	}
+	args = append(args, "--no-ask-user", "--output-format", "json")
+	args = append(args, modelArgs("--model", opts)...)
+	return append(args, "-p", opts.Prompt)
 }
 
 type copilotEvent struct {

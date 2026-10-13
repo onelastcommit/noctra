@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -146,6 +147,68 @@ func (p *Pipeline) prPollOnce(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
+func feedbackItems(ch watch.PRChanges) []agent.FeedbackItem {
+	items := make([]agent.FeedbackItem, 0, len(ch.Events))
+	for _, ev := range ch.Events {
+		item := agent.FeedbackItem{
+			Kind:   string(ev.Type),
+			Author: ev.Author.Login,
+			Human:  !ev.Author.IsBot(),
+			Body:   ev.Body,
+			URL:    ev.URL,
+			State:  ev.ReviewState,
+			Path:   ev.Path,
+			Line:   ev.Line,
+		}
+		if ev.ReplyTo != nil {
+			item.ReplyToAuthor = ev.ReplyTo.Author.Login
+			item.ReplyToBody = ev.ReplyTo.Body
+		}
+		items = append(items, item)
+	}
+	return items
+}
+
+const triageTimeout = 3 * time.Minute
+
+func (p *Pipeline) shouldTriage(ch watch.PRChanges) bool {
+	return p.cfg.PRTriage && ch.CIFailure == nil && len(ch.Events) > 0
+}
+
+func (p *Pipeline) triageFeedback(ctx context.Context, ch watch.PRChanges, identifier string, backend agent.Backend, items []agent.FeedbackItem) (agent.TriageVerdict, bool) {
+	logger := slog.With("id", identifier, "pr", ch.PR.URL)
+	dir, err := os.MkdirTemp("", "noctra-triage-*")
+	if err != nil {
+		logger.Warn("triage: no scratch dir; engaging without it", "err", err)
+		return agent.TriageVerdict{}, false
+	}
+	defer func() { _ = os.RemoveAll(dir) }()
+
+	logFile := filepath.Join(p.cfg.LogDir, identifier+".log")
+	_ = agent.AttemptHeader(logFile)
+	offset := agent.OffsetBefore(logFile)
+
+	usage, runErr := p.runAgent(ctx, backend, agent.RunOptions{
+		Workdir:   dir,
+		Prompt:    agent.BuildTriagePrompt(agent.TriageInput{PRNumber: ch.PR.Number, PRTitle: ch.PR.Title, Feedback: items}),
+		LogFile:   logFile,
+		Timeout:   triageTimeout,
+		MaxTokens: p.cfg.AgentMaxTokens,
+		Model:     agent.TriageModel(backend.Name()),
+		NoTools:   true,
+	})
+	p.chargeUsage(usage, "triage", identifier, ch.PR.URL, backend)
+	if runErr != nil {
+		logger.Warn("triage failed; engaging anyway", "err", runErr)
+		return agent.TriageVerdict{}, false
+	}
+	verdict, ok := agent.ExtractTriage(agent.ReadAfter(logFile, offset))
+	if !ok {
+		logger.Warn("triage gave no readable verdict; engaging anyway")
+	}
+	return verdict, ok
+}
+
 func countEvents(events []watch.Event) (comments, reviews int) {
 	for _, ev := range events {
 		switch ev.Type {
@@ -185,9 +248,18 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	logger := slog.With("id", identifier, "pr", ch.PR.URL)
 	logger.Info("re-engaging on PR", "events", len(ch.Events), "ci_failed", ch.CIFailure != nil)
 
-	p.ackEngagement(ctx, ch)
-
 	backend := p.resolveIterateBackend(ctx, ch.PR.URL, identifier)
+	items := feedbackItems(ch)
+
+	if p.shouldTriage(ch) {
+		if verdict, ok := p.triageFeedback(ctx, ch, identifier, backend, items); ok && !verdict.Act {
+			logger.Info("triage: nothing needs a response; not engaging", "reason", verdict.Reason)
+			p.advanceCursor(ch)
+			return
+		}
+	}
+
+	p.ackEngagement(ctx, ch)
 	run := state.RunHistory{
 		Identifier: identifier, TicketID: identifier, PRURL: ch.PR.URL,
 		AgentBackend: backend.Name(), RunType: "iterate", StartedAt: startedAt,
@@ -238,25 +310,6 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	} else {
 		logger.Warn("could not fetch Linear ticket — proceeding without context", "err", err)
 		title = identifier
-	}
-
-	items := make([]agent.FeedbackItem, 0, len(ch.Events))
-	for _, ev := range ch.Events {
-		item := agent.FeedbackItem{
-			Kind:   string(ev.Type),
-			Author: ev.Author.Login,
-			Human:  !ev.Author.IsBot(),
-			Body:   ev.Body,
-			URL:    ev.URL,
-			State:  ev.ReviewState,
-			Path:   ev.Path,
-			Line:   ev.Line,
-		}
-		if ev.ReplyTo != nil {
-			item.ReplyToAuthor = ev.ReplyTo.Author.Login
-			item.ReplyToBody = ev.ReplyTo.Body
-		}
-		items = append(items, item)
 	}
 
 	var ciItems []agent.CIItem

@@ -20,11 +20,13 @@ func (b antigravityBackend) Run(ctx context.Context, opts RunOptions) (Usage, er
 }
 
 func antigravityArgs(opts RunOptions) []string {
-	return []string{
-		"--dangerously-skip-permissions",
-		"--output-format", "stream-json",
-		"--print", opts.Prompt,
+	var args []string
+	if !opts.NoTools {
+		args = append(args, "--dangerously-skip-permissions")
 	}
+	args = append(args, modelArgs("--model", opts)...)
+	args = append(args, "--output-format", "stream-json")
+	return append(args, "--print", opts.Prompt)
 }
 
 type antigravityEvent struct {

@@ -27,7 +27,7 @@ var noctraEnvKeys = []string{
 	"TELEGRAM_ENABLED", "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID", "TELEGRAM_VERBOSE", "VERBOSE_NOTIFICATIONS",
 	"GEMINI_MODE", "GEMINI_API_KEY", "GEMINI_MODEL", "MAX_REVIEW_RETRIES",
 	"REPOS_BASE", "WORKTREE_BASE", "LOG_DIR",
-	"AUTO_ITERATE_PRS", "MAX_PR_ITERATIONS", "PR_POLL_INTERVAL",
+	"AUTO_ITERATE_PRS", "PR_TRIAGE", "MAX_PR_ITERATIONS", "PR_POLL_INTERVAL",
 	"TRUSTED_REVIEWERS", "STATE_DB", "STATE_FILE",
 	"MAX_DAILY_TOKENS", "MAX_DAILY_USD", "AGENT_MAX_TOKENS", "RATE_LIMIT_STRATEGY", "RATE_LIMIT_COOLDOWN",
 	"AUTH_CHECK_SCHEDULE", "ENGLISH_VARIANT",
@@ -286,6 +286,9 @@ func TestLoad_AutoIterateDefaults(t *testing.T) {
 	if cfg.AutoIteratePRs {
 		t.Errorf("AutoIteratePRs should default to false")
 	}
+	if !cfg.PRTriage {
+		t.Errorf("PRTriage should default to true")
+	}
 	if cfg.MaxPRIterations != DefaultMaxPRIterations {
 		t.Errorf("MaxPRIterations: got %d, want %d", cfg.MaxPRIterations, DefaultMaxPRIterations)
 	}
@@ -313,6 +316,7 @@ func TestLoad_TrustedReviewersParsesCSV(t *testing.T) {
 	writeFile(t, filepath.Join(dir, ".env"), `LINEAR_API_KEY="lin_xyz"
 TRUSTED_REVIEWERS="gemini-code-assist, coderabbit,humanreviewer"
 AUTO_ITERATE_PRS="true"
+PR_TRIAGE="false"
 MAX_PR_ITERATIONS="5"
 PR_POLL_INTERVAL="60"`)
 	cfg, err := Load(dir)
@@ -322,6 +326,9 @@ PR_POLL_INTERVAL="60"`)
 
 	if !cfg.AutoIteratePRs {
 		t.Error("AutoIteratePRs should be true")
+	}
+	if cfg.PRTriage {
+		t.Error("PR_TRIAGE=false should turn triage off")
 	}
 	if cfg.MaxPRIterations != 5 {
 		t.Errorf("MaxPRIterations: got %d", cfg.MaxPRIterations)
