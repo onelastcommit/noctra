@@ -149,7 +149,7 @@ func TestRunCLI_LogsStderrLiveThenStdoutAsResponse(t *testing.T) {
 	logFile := filepath.Join(t.TempDir(), "agent.log")
 	opts := RunOptions{LogFile: logFile, Workdir: t.TempDir()}
 	out, err := runCLI(context.Background(), "sh",
-		[]string{"-c", "echo transcript >&2; echo final answer; echo footer >&2"}, nil, opts)
+		[]string{"-c", "echo transcript >&2; echo final answer; echo footer >&2"}, nil, opts, nil)
 	if err != nil {
 		t.Fatalf("runCLI: %v", err)
 	}

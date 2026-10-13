@@ -59,15 +59,6 @@ func TestPrimaryModel_PicksTheModelThatDidTheWork(t *testing.T) {
 	}
 }
 
-func TestParseClaudeJSON_ReadsPrimaryModel(t *testing.T) {
-	out := `{"type":"result","result":"done","total_cost_usd":0.2,"usage":{"input_tokens":10,"output_tokens":5},` +
-		`"modelUsage":{"claude-opus-5-5[1m]":{"outputTokens":5,"costUSD":0.18},"claude-haiku-4-5-20251001":{"outputTokens":40,"costUSD":0.02}}}`
-	usage, _, ok := ParseClaudeJSON(out)
-	if !ok || usage.Model != "claude-opus-5-5[1m]" {
-		t.Fatalf("ok=%v model=%q", ok, usage.Model)
-	}
-}
-
 func fakeClaude(t *testing.T, events string) RunOptions {
 	t.Helper()
 	dir := t.TempDir()
@@ -82,7 +73,7 @@ func fakeClaude(t *testing.T, events string) RunOptions {
 	return RunOptions{Workdir: dir, Prompt: "x", LogFile: filepath.Join(dir, "run.log")}
 }
 
-func TestRunCapped_ModelFromResultEvent(t *testing.T) {
+func TestRunStream_ModelFromResultEvent(t *testing.T) {
 	opts := fakeClaude(t, `{"type":"assistant","message":{"model":"claude-haiku-4-5-20251001","usage":{"output_tokens":50}}}
 {"type":"assistant","message":{"model":"claude-opus-5-5","usage":{"output_tokens":20}}}
 {"type":"result","result":"ok","total_cost_usd":0.3,"usage":{"input_tokens":5,"output_tokens":70},"modelUsage":{"claude-opus-5-5":{"outputTokens":20,"costUSD":0.29},"claude-haiku-4-5-20251001":{"outputTokens":50,"costUSD":0.01}}}
@@ -97,7 +88,7 @@ func TestRunCapped_ModelFromResultEvent(t *testing.T) {
 	}
 }
 
-func TestRunCapped_ModelSurvivesAbort(t *testing.T) {
+func TestRunStream_ModelSurvivesAbort(t *testing.T) {
 	opts := fakeClaude(t, `{"type":"assistant","message":{"model":"claude-opus-5-5","usage":{"input_tokens":600,"output_tokens":600}}}
 `)
 	opts.MaxTokens = 1000

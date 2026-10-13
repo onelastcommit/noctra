@@ -10,7 +10,7 @@ const authScanLines = 40
 var authFailureRe = regexp.MustCompile(`(?i)not logged in|please run /login|invalid api key|invalid x-api-key|authentication_error|oauth token (has )?expired|token (has )?expired|could not be refreshed|bad credentials|http 401|401 unauthori[sz]ed|no authentication information|not authenticated|authentication required|please (re-?)?log ?in|login required|session (has )?expired`)
 
 func AuthFailureLine(output string) string {
-	lines := strings.Split(output, "\n")
+	lines := strings.Split(withoutToolLines(output), "\n")
 	scanned := 0
 	for i := len(lines) - 1; i >= 0 && scanned < authScanLines; i-- {
 		s := strings.TrimSpace(lines[i])
