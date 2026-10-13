@@ -95,16 +95,22 @@ func TestShouldTriage(t *testing.T) {
 	withCI := feedback
 	withCI.CIFailure = &watch.CIFailure{SHA: "abc"}
 
-	if !on.shouldTriage(feedback) {
+	claude, _ := agent.New("claude")
+	agy, _ := agent.New("antigravity")
+
+	if !on.shouldTriage(feedback, claude) {
 		t.Error("review activity alone should be triaged")
 	}
-	if on.shouldTriage(withCI) {
+	if on.shouldTriage(withCI, claude) {
 		t.Error("a CI failure always engages, so it must not be triaged")
 	}
-	if on.shouldTriage(watch.PRChanges{}) {
+	if on.shouldTriage(watch.PRChanges{}, claude) {
 		t.Error("nothing to triage")
 	}
-	if off.shouldTriage(feedback) {
+	if off.shouldTriage(feedback, claude) {
 		t.Error("PR_TRIAGE=false turns it off")
+	}
+	if on.shouldTriage(feedback, agy) {
+		t.Error("Antigravity can't run without tools, so it must engage directly")
 	}
 }

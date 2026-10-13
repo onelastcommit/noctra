@@ -171,8 +171,8 @@ func feedbackItems(ch watch.PRChanges) []agent.FeedbackItem {
 
 const triageTimeout = 3 * time.Minute
 
-func (p *Pipeline) shouldTriage(ch watch.PRChanges) bool {
-	return p.cfg.PRTriage && ch.CIFailure == nil && len(ch.Events) > 0
+func (p *Pipeline) shouldTriage(ch watch.PRChanges, backend agent.Backend) bool {
+	return p.cfg.PRTriage && agent.TriageSupported(backend.Name()) && ch.CIFailure == nil && len(ch.Events) > 0
 }
 
 func (p *Pipeline) triageFeedback(ctx context.Context, ch watch.PRChanges, identifier string, backend agent.Backend, items []agent.FeedbackItem) (agent.TriageVerdict, bool) {
@@ -251,7 +251,7 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 	backend := p.resolveIterateBackend(ctx, ch.PR.URL, identifier)
 	items := feedbackItems(ch)
 
-	if p.shouldTriage(ch) {
+	if p.shouldTriage(ch, backend) {
 		if verdict, ok := p.triageFeedback(ctx, ch, identifier, backend, items); ok && !verdict.Act {
 			logger.Info("triage: nothing needs a response; not engaging", "reason", verdict.Reason)
 			p.advanceCursor(ch)

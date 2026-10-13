@@ -54,6 +54,14 @@ func TestTriageModel(t *testing.T) {
 	if TriageModel("codex") != "" {
 		t.Error("backends without a known small model keep their default")
 	}
+	for _, b := range []string{"claude", "codex", "copilot"} {
+		if !TriageSupported(b) {
+			t.Errorf("%s has a verified tool-less mode", b)
+		}
+	}
+	if TriageSupported("antigravity") {
+		t.Error("antigravity's headless mode still allows read_url_content, so it must not triage")
+	}
 }
 
 func TestNoToolsArgs_DropAutoApprovalOnEveryBackend(t *testing.T) {
@@ -74,12 +82,18 @@ func TestNoToolsArgs_DropAutoApprovalOnEveryBackend(t *testing.T) {
 	if i := slices.Index(codex, "--sandbox"); i < 0 || codex[i+1] != "read-only" || codex[len(codex)-1] != "decide" {
 		t.Errorf("codex must run read-only with the prompt last: %v", codex)
 	}
+	for _, want := range []string{"--ignore-user-config", "shell_tool", "unified_exec"} {
+		if !slices.Contains(codex, want) {
+			t.Errorf("codex's read-only sandbox still lets the shell read files; %s is required: %v", want, codex)
+		}
+	}
 	if !slices.Contains(codex, "--skip-git-repo-check") {
 		t.Errorf("codex refuses to run in the triage scratch dir, which isn't a git repo, without --skip-git-repo-check: %v", codex)
 	}
 
-	if copilot := copilotArgs(opts); slices.Contains(copilot, "--allow-all-tools") {
-		t.Errorf("copilot: %v", copilot)
+	copilot := copilotArgs(opts)
+	if slices.Contains(copilot, "--allow-all-tools") || !slices.Contains(copilot, "--available-tools="+copilotNoSuchTool) {
+		t.Errorf("copilot reads files with view unless its tools are limited to one that doesn't exist: %v", copilot)
 	}
 
 	agy := antigravityArgs(opts)

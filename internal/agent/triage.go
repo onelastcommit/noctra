@@ -12,7 +12,14 @@ const (
 )
 
 var triageModels = map[string]string{
-	"claude": "haiku",
+	"claude":  "haiku",
+	"codex":   "",
+	"copilot": "",
+}
+
+func TriageSupported(backend string) bool {
+	_, ok := triageModels[backend]
+	return ok
 }
 
 func TriageModel(backend string) string {
