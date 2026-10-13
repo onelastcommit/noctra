@@ -76,9 +76,12 @@ Read `.claude/skills/<name>/SKILL.md` before working in its area. Codex and Copi
 
 ## Build and test
 
+Run all of these before every push; CI fails on any of them.
+
 ```bash
 go build -o noctra ./cmd/noctra
-go test ./...
+go test -race ./...
 go vet ./...          # must be clean
+golangci-lint run ./...   # CI pins v2.5.0 (.github/workflows/ci.yml); catches errcheck, which vet doesn't
 make check-comments
 ```
