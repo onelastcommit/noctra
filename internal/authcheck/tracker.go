@@ -1,15 +1,5 @@
 package authcheck
 
-type Report struct {
-	Failing   []Result
-	Reminders []Result
-	Recovered []Result
-}
-
-func (r Report) Empty() bool {
-	return len(r.Failing) == 0 && len(r.Reminders) == 0 && len(r.Recovered) == 0
-}
-
 type Tracker struct {
 	failing map[string]struct{}
 }

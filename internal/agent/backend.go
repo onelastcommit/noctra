@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/onelastcommit/noctra/internal/ghauth"
 	"github.com/onelastcommit/noctra/internal/plugins"
@@ -20,17 +19,6 @@ import (
 var ErrTimedOut = errors.New("agent timed out")
 
 var ErrTokenCapExceeded = errors.New("per-run token ceiling exceeded")
-
-type RunOptions struct {
-	Workdir       string
-	Prompt        string
-	LogFile       string
-	Timeout       time.Duration
-	UseAgentTeams bool
-	MaxTokens     int64
-	Env           []string
-	PluginDirs    []string
-}
 
 func stageSkills(opts RunOptions) func() {
 	cleanup, err := plugins.Stage(opts.Workdir, opts.PluginDirs)
@@ -48,15 +36,6 @@ func childEnv(env []string, opts RunOptions) []string {
 		env = os.Environ()
 	}
 	return ghauth.MergeEnv(env, opts.Env)
-}
-
-type Backend interface {
-	Name() string
-	Label() string
-	CLI() string
-	CoAuthor() string
-	Run(ctx context.Context, opts RunOptions) (Usage, error)
-	HasRateLimit(output string) bool
 }
 
 func New(name string) (Backend, error) {

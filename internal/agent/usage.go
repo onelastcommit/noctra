@@ -6,14 +6,6 @@ import (
 	"strings"
 )
 
-type Usage struct {
-	InputTokens  int64
-	OutputTokens int64
-	TotalTokens  int64
-	CostUSD      float64
-	Model        string
-}
-
 var (
 	tokensUsedRe   = regexp.MustCompile(`(?i)tokens?\s+used[:\s]+([0-9,]+)`)
 	totalTokensRe  = regexp.MustCompile(`(?i)total\s+tokens?[:\s]+([0-9,]+)`)

@@ -16,14 +16,6 @@ import (
 	"github.com/onelastcommit/noctra/internal/plugins"
 )
 
-type check struct {
-	name   string
-	ok     bool
-	detail string
-	hint   string
-	note   string
-}
-
 func gather(scriptDir string) []check {
 	var checks []check
 
@@ -141,14 +133,6 @@ func Run(scriptDir string) error {
 	}
 	fmt.Printf("  All %d checks passed — ready to roll.\n", passed)
 	return nil
-}
-
-type jsonCheck struct {
-	Name   string `json:"name"`
-	OK     bool   `json:"ok"`
-	Detail string `json:"detail"`
-	Hint   string `json:"hint,omitempty"`
-	Note   string `json:"note,omitempty"`
 }
 
 func RunJSON(scriptDir string, w io.Writer) error {

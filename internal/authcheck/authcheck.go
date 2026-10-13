@@ -13,21 +13,6 @@ import (
 	"github.com/onelastcommit/noctra/internal/ghauth"
 )
 
-type Result struct {
-	Name    string
-	OK      bool
-	Skipped bool
-	Detail  string
-	Fix     string
-}
-
-type Check struct {
-	Name string
-	Run  func(ctx context.Context) Result
-}
-
-type Exec func(ctx context.Context, name string, args ...string) (string, error)
-
 func DefaultExec(ctx context.Context, name string, args ...string) (string, error) {
 	out, err := exec.CommandContext(ctx, name, args...).CombinedOutput()
 	return string(out), err
@@ -56,8 +41,6 @@ func GitHubCLI(run Exec) Check {
 		return Result{OK: true}
 	}}
 }
-
-type TokenMinter func(ctx context.Context, ownerRepo string) error
 
 func GitHubApp(mint TokenMinter, health func(ctx context.Context) error, repos func(ctx context.Context) []string) Check {
 	return Check{Name: "GitHub App", Run: func(ctx context.Context) Result {

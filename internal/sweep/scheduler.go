@@ -11,11 +11,6 @@ import (
 	"github.com/onelastcommit/noctra/internal/state"
 )
 
-type RepoResolver interface {
-	AllRepoPaths() []string
-	ResolveDirect(ctx context.Context, ref, branch string) (repo.Resolved, error)
-}
-
 type Scheduler struct {
 	store      *state.Store
 	resolver   RepoResolver
@@ -55,13 +50,6 @@ func NewScheduler(store *state.Store, resolver RepoResolver, tasks []Task, inter
 	}
 }
 
-type Job struct {
-	Task       Task
-	RepoPath   string
-	RepoSlug   string
-	MainBranch string
-}
-
 func (s *Scheduler) DueIn() time.Duration {
 	now := s.now()
 	if s.schedule != nil {
@@ -94,11 +82,6 @@ func (s *Scheduler) intervalDueIn(now time.Time) time.Duration {
 
 func (s *Scheduler) MarkSwept() {
 	s.lastSweep = s.now()
-}
-
-type repoTarget struct {
-	path   string
-	branch string
 }
 
 func (s *Scheduler) repoTargets(ctx context.Context) []repoTarget {
@@ -154,13 +137,6 @@ func parseSweepRepoRef(entry string) (ref, branch string) {
 		return entry[:idx], entry[idx+1:]
 	}
 	return entry, ""
-}
-
-type PlanOptions struct {
-	Tasks          []string
-	Repos          []string
-	IgnoreCooldown bool
-	Limit          int
 }
 
 func (s *Scheduler) Plan(ctx context.Context) []Job {

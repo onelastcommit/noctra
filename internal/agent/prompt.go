@@ -5,16 +5,6 @@ import (
 	"strings"
 )
 
-type BuildPromptInput struct {
-	Identifier       string
-	Title            string
-	Description      string
-	Comments         []string
-	UseTeams         bool
-	AutoReleaseLabel bool
-	RepoLessons      string
-}
-
 func RepoLessonsSection(lessons string) string {
 	if strings.TrimSpace(lessons) == "" {
 		return ""

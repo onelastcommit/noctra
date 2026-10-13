@@ -5,37 +5,6 @@ import (
 	"strings"
 )
 
-type FeedbackItem struct {
-	Kind          string
-	Author        string
-	Human         bool
-	Body          string
-	State         string
-	URL           string
-	Path          string
-	Line          int
-	ReplyToAuthor string
-	ReplyToBody   string
-}
-
-type CIItem struct {
-	Name string
-	URL  string
-	Logs string
-}
-
-type FixPromptInput struct {
-	Identifier     string
-	Title          string
-	Description    string
-	PRNumber       int
-	PRURL          string
-	Feedback       []FeedbackItem
-	CI             []CIItem
-	RepoLessons    string
-	PriorReasoning string
-}
-
 func BuildFixPrompt(in FixPromptInput) string {
 	desc := in.Description
 	if desc == "" {

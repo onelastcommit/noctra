@@ -145,6 +145,17 @@ The non-obvious facts that previously lived in comments, kept here so removing t
 | `plugins/stage.go` | Codex, Copilot and Antigravity have no per-run plugin flag, but all three read project skills from `.agents/skills` (verified for Codex/Antigravity by probing the CLIs; Copilot per GitHub's docs). `Stage` copies skills there as `noctra-<plugin>-<skill>` for the run and the backend's `Run` removes them on return, before Noctra commits. Copies, not symlinks: an agent editing a staged file must not corrupt the shared install. `Stage` never removes a directory it didn't create: each staged copy carries a `.noctra-staged` marker, so a crashed run's leftover is replaced but a project's own skill at the same path is skipped. `info/exclude` hides untracked files, not deletions of tracked ones, so deleting a project's skill would land in the PR. `info/exclude` is also the lowest-precedence ignore source: a repo `.gitignore` negation such as `!.agents/skills/**` re-includes staged skills, so after staging each one `Stage` asks `git ls-files --others --exclude-standard` whether `git add -A` would pick it up, and removes it if so (or if the check fails). |
 | `repo/worktree.go` | Every worktree creator calls `plugins.ExcludeStaged` inside `lockRepo`, adding `/.agents/skills/noctra-*/` to the clone's shared `info/exclude`. Removal after the run isn't enough on its own: agents sometimes commit mid-run, and `git add -A` would sweep the staged skills into the PR. |
 
+## Invariant 8: where types live
+
+A package's data model lives in its `types.go`: plain structs, interfaces, func types and enums (the named type plus its `const` block), together with trivial methods such as `Error`, `String` or `Unwrap`. A large set of wire types for one external API gets its own `<source>_types.go` (`source/jira_types.go`).
+
+Three kinds stay beside their logic instead:
+- a type that owns behaviour: a constructor plus real methods (`Pipeline`, `Store`, `Server`, `claudeBackend`, `review.Result`, `agent.ModelPrices`);
+- an unexported enum with a single consumer (`agentRunStatus` next to `classifyAgentRun`);
+- a small decode struct used by one function.
+
+Go has no barrel or index files. Every file in a directory is already one package, so a re-exporting file adds nothing.
+
 ## Quality gates
 
 Before submitting changes:

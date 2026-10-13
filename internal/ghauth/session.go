@@ -16,10 +16,6 @@ const refreshMargin = 10 * time.Minute
 
 const unavailableToken = "noctra-token-unavailable"
 
-type minter interface {
-	Token(ctx context.Context, instanceID string, key ed25519.PrivateKey, ownerRepo string, scope Scope) (Token, error)
-}
-
 type Session struct {
 	Instance Instance
 	Dir      string

@@ -22,11 +22,6 @@ const (
 	authUnknown      = "unknown"
 )
 
-type agentAuth struct {
-	method string
-	source string
-}
-
 type authProbe struct {
 	run      authcheck.Exec
 	getenv   func(string) string

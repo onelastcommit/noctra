@@ -2,8 +2,10 @@ package linear
 
 import (
 	"fmt"
+	"net/http"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type Project struct {
@@ -249,4 +251,37 @@ func (i Issue) BackendLabel() string {
 		}
 	}
 	return ""
+}
+
+type TokenStore interface {
+	LoadOAuth() (access string, expiresAt time.Time, refresh string)
+	SaveOAuth(access string, expiresAt time.Time, refresh string) error
+}
+
+type TokenManagerConfig struct {
+	ClientID     string
+	ClientSecret string
+	RefreshToken string
+	Scope        string
+	Endpoint     string
+	HTTP         *http.Client
+	Store        TokenStore
+}
+
+type StateIDs struct {
+	Trigger  string
+	InReview string
+	Done     string
+}
+
+type WorkflowStateID struct {
+	ID   string
+	Name string
+}
+
+type StateCount struct {
+	State    string
+	Type     string
+	Position float64
+	Count    int
 }
