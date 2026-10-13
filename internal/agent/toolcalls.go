@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"strings"
 	"sync"
@@ -120,6 +121,6 @@ func (w *parsingWriter) handle(line []byte) {
 		return
 	}
 	if tl := w.parser.feed(line); tl != "" {
-		io.WriteString(w.log, tl+"\n")
+		fmt.Fprintln(w.log, tl)
 	}
 }
