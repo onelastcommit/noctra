@@ -58,7 +58,7 @@ type Watcher struct {
 func New(gh *github.Client, store *state.Store, reposFn func(context.Context) []string, trusted []string) *Watcher {
 	t := make(map[string]bool, len(trusted))
 	for _, login := range trusted {
-		if login = strings.ToLower(strings.TrimSpace(login)); login != "" {
+		if login = botLoginKey(login); login != "" {
 			t[login] = true
 		}
 	}
@@ -220,7 +220,11 @@ func (w *Watcher) actionable(ev Event) bool {
 	if !ev.Author.IsBot() {
 		return true
 	}
-	return w.trusted[strings.ToLower(ev.Author.Login)]
+	return w.trusted[botLoginKey(ev.Author.Login)]
+}
+
+func botLoginKey(login string) string {
+	return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(login)), "[bot]")
 }
 
 var botCommandRe = regexp.MustCompile(`(?i)^[@/][\w-]+(\s+(review|fix|fixup|please|now|again|go|run|retry|recheck))?$`)

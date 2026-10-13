@@ -436,6 +436,11 @@ func (p *Pipeline) iteratePR(ctx context.Context, ch watch.PRChanges, identifier
 
 		p.notifier.Send(ctx, fmt.Sprintf("✅ *%s* — pushed follow-up to PR #%d (%s)",
 			notify.EscapeMarkdown(displayName(identifier)), ch.PR.Number, engagementSummary(ch)))
+	} else if nothingToRespondTo(ch, output) {
+		logger.Info("no diff produced; agent judged nothing needed a response")
+		p.finishRun(run, "no_change")
+		p.advanceCursor(ch)
+		return
 	} else {
 		logger.Info("no diff produced")
 		convReply := "Noctra reviewed this but made no change — it appears already addressed or no longer applicable. Re-open if you'd like it revisited."
@@ -470,7 +475,6 @@ func (p *Pipeline) recordIteration(ctx context.Context, ch watch.PRChanges, iden
 		lastReview    time.Time
 		lastCISHA     string
 		lastReasoning string
-		lastCIRunURL  string
 	)
 	if err := p.store.Update(ch.PR.URL, func(r *state.PRState) {
 		if r.TicketID == "" {
@@ -495,7 +499,6 @@ func (p *Pipeline) recordIteration(ctx context.Context, ch watch.PRChanges, iden
 		lastReview = r.LastReviewAt
 		lastCISHA = r.LastCISHA
 		lastReasoning = r.LastReasoning
-		lastCIRunURL = r.LastCIRunURL
 	}); err != nil {
 		slog.Warn("pipeline: state update failed", "url", ch.PR.URL, "err", err)
 		return
@@ -509,7 +512,7 @@ func (p *Pipeline) recordIteration(ctx context.Context, ch watch.PRChanges, iden
 	)
 
 	if iterations >= p.cfg.MaxPRIterations {
-		reason := capReason(lastReasoning, lastCIRunURL)
+		reason := capReason(lastReasoning, iterationCIRunURL(ch))
 		msg := fmt.Sprintf("🛑 *%s* — PR #%d hit iteration cap (%d attempts). Needs human attention.",
 			notify.EscapeMarkdown(displayName(identifier)), prNumber, iterations)
 		if reason != "" {
@@ -555,16 +558,50 @@ func (p *Pipeline) ackEngagement(ctx context.Context, ch watch.PRChanges) {
 	}
 }
 
+func silentFindings(agentOutput string) map[int]bool {
+	silent := map[int]bool{}
+	findings, ok := agent.ExtractFindingReplies(agentOutput)
+	if !ok {
+		return silent
+	}
+	for _, f := range findings {
+		if f.Silent() {
+			silent[f.Finding-1] = true
+		}
+	}
+	return silent
+}
+
+func respondableEvents(ch watch.PRChanges, agentOutput string) watch.PRChanges {
+	silent := silentFindings(agentOutput)
+	if len(silent) == 0 {
+		return ch
+	}
+	out := ch
+	out.Events = nil
+	for i, ev := range ch.Events {
+		if !silent[i] {
+			out.Events = append(out.Events, ev)
+		}
+	}
+	return out
+}
+
+func nothingToRespondTo(ch watch.PRChanges, agentOutput string) bool {
+	return ch.CIFailure == nil && len(ch.Events) > 0 && len(respondableEvents(ch, agentOutput).Events) == 0
+}
+
 func (p *Pipeline) postIterationReplies(ctx context.Context, ch watch.PRChanges, agentOutput, sha, convReply string, logger *slog.Logger) {
 	threadReplies := threadRepliesFor(ch, agentOutput, sha)
 
 	p.gh.ReplyToThreadsByComment(ctx, ch.PR.URL, threadReplies)
 
-	if hasConversationComment(ch) {
-		p.replyToConversation(ctx, ch, convReply, logger)
+	respondable := respondableEvents(ch, agentOutput)
+	if hasConversationComment(respondable) {
+		p.replyToConversation(ctx, respondable, convReply, logger)
 		return
 	}
-	if shouldPostFallbackComment(ch, len(threadReplies)) {
+	if shouldPostFallbackComment(respondable, len(threadReplies)) {
 		if err := p.gh.PostComment(ctx, ch.PR.URL, convReply); err != nil {
 			logger.Warn("post iteration reply failed", "err", err)
 		}
@@ -579,7 +616,7 @@ func threadRepliesFor(ch watch.PRChanges, agentOutput, sha string) map[int64]git
 	}
 	for _, f := range findings {
 		idx := f.Finding - 1
-		if idx < 0 || idx >= len(ch.Events) {
+		if f.Silent() || idx < 0 || idx >= len(ch.Events) {
 			continue
 		}
 		ev := ch.Events[idx]
@@ -684,6 +721,13 @@ func displayName(identifier string) string {
 		return fmt.Sprintf("Sweep: %s on %s", task, repoSlug)
 	}
 	return identifier
+}
+
+func iterationCIRunURL(ch watch.PRChanges) string {
+	if ch.CIFailure == nil || len(ch.CIFailure.FailedChecks) == 0 {
+		return ""
+	}
+	return ch.CIFailure.FailedChecks[0].URL()
 }
 
 func capReason(reasoning, ciRunURL string) string {

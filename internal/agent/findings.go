@@ -13,7 +13,12 @@ const (
 type FindingReply struct {
 	Finding   int    `json:"finding"`
 	Addressed bool   `json:"addressed"`
+	Respond   *bool  `json:"respond,omitempty"`
 	Reply     string `json:"reply"`
+}
+
+func (f FindingReply) Silent() bool {
+	return f.Respond != nil && !*f.Respond && !f.Addressed
 }
 
 func ExtractFindingReplies(logContents string) ([]FindingReply, bool) {
@@ -31,7 +36,7 @@ func ExtractFindingReplies(logContents string) ([]FindingReply, bool) {
 	byFinding := make(map[int]FindingReply, len(parsed))
 	for _, f := range parsed {
 		f.Reply = strings.TrimSpace(f.Reply)
-		if f.Finding < 1 || f.Reply == "" {
+		if f.Finding < 1 || (f.Reply == "" && !f.Silent()) {
 			continue
 		}
 		if _, seen := byFinding[f.Finding]; !seen {

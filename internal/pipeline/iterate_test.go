@@ -205,3 +205,13 @@ func TestCapReason(t *testing.T) {
 		t.Errorf("capReason did not truncate long reasoning: len=%d", len([]rune(long)))
 	}
 }
+
+func TestIterationCIRunURL_OnlyWhenThisIterationFixedCI(t *testing.T) {
+	if got := iterationCIRunURL(watch.PRChanges{Events: []watch.Event{{Body: "make it private"}}}); got != "" {
+		t.Errorf("a review-only iteration must not link a CI run, got %q", got)
+	}
+	ch := watch.PRChanges{CIFailure: &watch.CIFailure{SHA: "abc", FailedChecks: []github.Check{{DetailsURL: "https://ci/run/2"}}}}
+	if got := iterationCIRunURL(ch); got != "https://ci/run/2" {
+		t.Errorf("got %q", got)
+	}
+}
