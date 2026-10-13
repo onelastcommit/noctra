@@ -90,3 +90,25 @@ func TestExtractFindingReplies(t *testing.T) {
 		})
 	}
 }
+
+func TestExtractFindingReplies_KeepsSilentEntriesWithoutReply(t *testing.T) {
+	out := FindingsStartMarker + `
+[{"finding": 1, "addressed": false, "respond": false, "reply": ""},
+ {"finding": 2, "addressed": true, "reply": "Restricted the count to the window."},
+ {"finding": 3, "addressed": false, "reply": ""}]
+` + FindingsEndMarker
+	got, ok := ExtractFindingReplies(out)
+	if !ok || len(got) != 2 {
+		t.Fatalf("want the silent entry and the reply, got %+v", got)
+	}
+	if !got[0].Silent() || got[1].Silent() {
+		t.Errorf("silence flags wrong: %+v", got)
+	}
+}
+
+func TestFindingReply_AddressedIsNeverSilent(t *testing.T) {
+	no := false
+	if (FindingReply{Finding: 1, Addressed: true, Respond: &no}).Silent() {
+		t.Error("a finding the agent changed code for must still get its reply")
+	}
+}

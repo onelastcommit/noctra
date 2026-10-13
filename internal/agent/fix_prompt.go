@@ -103,13 +103,15 @@ Then, after the summary, report on each numbered review finding above so Noctra 
 %s
 [
   {"finding": 1, "addressed": true, "reply": "Narrowed the regex to 40+ hex chars so legitimate IDs aren't redacted."},
-  {"finding": 2, "addressed": false, "reply": "Kept the dual-token check by design — the read/admin split still holds; explained why."}
+  {"finding": 2, "addressed": false, "reply": "Kept the dual-token check by design — the read/admin split still holds; explained why."},
+  {"finding": 3, "addressed": false, "respond": false, "reply": ""}
 ]
 %s
 
 - `+"`finding`"+` is the number from the "Review feedback to address" list.
 - `+"`addressed`"+` is true if you changed code for it, false if you pushed back or judged it inapplicable.
 - `+"`reply`"+` is one plain sentence posted on that finding's thread — no markdown headings. Include an entry for every numbered finding.
+- `+"`respond`"+` is false when the item isn't feedback for you to act on or answer: a bot's status or progress notice, a summary that only points at findings listed separately, an acknowledgement, or a request aimed at another tool. Noctra then posts nothing for it, so leave `+"`reply`"+` empty. Omit `+"`respond`"+` for everything else. Judge each item by what it says, not by who wrote it.
 `, FindingsStartMarker, FindingsEndMarker, FindingsStartMarker, FindingsEndMarker)
 	}
 

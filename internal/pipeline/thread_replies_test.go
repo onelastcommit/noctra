@@ -31,3 +31,58 @@ func TestThreadRepliesFor_RoutesReplyCommentToItsThreadRoot(t *testing.T) {
 		t.Errorf("reply: %+v", r)
 	}
 }
+
+func codexSequence() watch.PRChanges {
+	return watch.PRChanges{Events: []watch.Event{
+		{Type: watch.EventComment, Body: "Codex Review Summary: in progress"},
+		{Type: watch.EventReview, Body: "Here are some automated review suggestions"},
+		{Type: watch.EventComment, Path: "metrics-repository.ts", CommentID: "7", ThreadID: "7", Body: "P1: restrict to the window"},
+	}}
+}
+
+func findingsOutput(json string) string {
+	return agent.FindingsStartMarker + "\n" + json + "\n" + agent.FindingsEndMarker
+}
+
+func TestRespondableEvents_DropsWhatTheAgentChoseNotToAnswer(t *testing.T) {
+	out := findingsOutput(`[{"finding":1,"addressed":false,"respond":false,"reply":""},
+{"finding":2,"addressed":false,"respond":false,"reply":""},
+{"finding":3,"addressed":true,"reply":"Counted only meetings inside the window."}]`)
+	ch := codexSequence()
+
+	got := respondableEvents(ch, out)
+	if len(got.Events) != 1 || got.Events[0].Path != "metrics-repository.ts" {
+		t.Fatalf("only the inline finding should remain, got %+v", got.Events)
+	}
+	if hasConversationComment(got) {
+		t.Error("a status comment the agent chose not to answer must not trigger a conversation reply")
+	}
+	replies := threadRepliesFor(ch, out, "abc1234")
+	if r, ok := replies[7]; !ok || !r.Resolve || len(replies) != 1 {
+		t.Errorf("the finding should get its own resolved thread reply, got %+v", replies)
+	}
+	if nothingToRespondTo(ch, out) {
+		t.Error("a run with a real finding is not a quiet run")
+	}
+}
+
+func TestNothingToRespondTo(t *testing.T) {
+	statusOnly := watch.PRChanges{Events: []watch.Event{{Type: watch.EventComment, Body: "Codex Review Summary: in progress"}}}
+	silent := findingsOutput(`[{"finding":1,"addressed":false,"respond":false,"reply":""}]`)
+	answered := findingsOutput(`[{"finding":1,"addressed":false,"reply":"Nothing to change; the review is still running."}]`)
+
+	if !nothingToRespondTo(statusOnly, silent) {
+		t.Error("everything judged silent and no CI → quiet run")
+	}
+	if nothingToRespondTo(statusOnly, answered) {
+		t.Error("the agent chose to answer → not quiet")
+	}
+	if nothingToRespondTo(statusOnly, "no findings block at all") {
+		t.Error("without a findings block Noctra cannot know, so it must still reply")
+	}
+	withCI := statusOnly
+	withCI.CIFailure = &watch.CIFailure{SHA: "abc"}
+	if nothingToRespondTo(withCI, silent) {
+		t.Error("a CI failure is always worth reporting")
+	}
+}

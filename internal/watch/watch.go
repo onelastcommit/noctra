@@ -220,27 +220,11 @@ func (w *Watcher) actionable(ev Event) bool {
 	if !ev.Author.IsBot() {
 		return true
 	}
-	if isBotBoilerplate(ev) {
-		return false
-	}
 	return w.trusted[botLoginKey(ev.Author.Login)]
 }
 
 func botLoginKey(login string) string {
 	return strings.TrimSuffix(strings.ToLower(strings.TrimSpace(login)), "[bot]")
-}
-
-const (
-	codexStatusMarker = "<!-- codex-pull-request-review-summary -->"
-	codexReviewHeader = "### 💡 Codex Review"
-)
-
-func isBotBoilerplate(ev Event) bool {
-	body := strings.TrimSpace(ev.Body)
-	if strings.Contains(body, codexStatusMarker) {
-		return true
-	}
-	return ev.Type == EventReview && strings.HasPrefix(body, codexReviewHeader)
 }
 
 var botCommandRe = regexp.MustCompile(`(?i)^[@/][\w-]+(\s+(review|fix|fixup|please|now|again|go|run|retry|recheck))?$`)

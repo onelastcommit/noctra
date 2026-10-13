@@ -130,6 +130,9 @@ func TestBuildFixPrompt_FindingsBlockOnlyWithFeedback(t *testing.T) {
 	if !strings.Contains(withFeedback, FindingsStartMarker) || !strings.Contains(withFeedback, FindingsEndMarker) {
 		t.Errorf("expected per-finding markers when feedback present:\n%s", withFeedback)
 	}
+	if !strings.Contains(withFeedback, `"respond": false`) {
+		t.Errorf("the agent must be told it can stay silent on items that aren't feedback:\n%s", withFeedback)
+	}
 
 	ciOnly := BuildFixPrompt(FixPromptInput{
 		Identifier: "ENG-9", Title: "T", PRNumber: 9, PRURL: "url",
