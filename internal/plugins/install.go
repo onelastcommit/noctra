@@ -18,13 +18,6 @@ import (
 	"time"
 )
 
-type Installed struct {
-	Name   string
-	Dir    string
-	Vetted bool
-	Skills []string
-}
-
 const (
 	markerFile   = ".noctra-plugin"
 	manifestDir  = ".claude-plugin"

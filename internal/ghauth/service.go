@@ -15,71 +15,12 @@ import (
 
 const DefaultServiceURL = "https://auth.getnoctra.dev"
 
-type Scope string
-
-const (
-	ScopeWrite Scope = "write"
-	ScopeGit   Scope = "git"
-	ScopeRead  Scope = "read"
-)
-
 func ParseScope(s string) (Scope, error) {
 	switch Scope(s) {
 	case ScopeWrite, ScopeGit, ScopeRead:
 		return Scope(s), nil
 	}
 	return "", fmt.Errorf("unknown scope %q (want write, git or read)", s)
-}
-
-type Bot struct {
-	Login string `json:"login"`
-	ID    int64  `json:"id"`
-	Email string `json:"email"`
-}
-
-type AppConfig struct {
-	AppID      int64  `json:"app_id"`
-	ClientID   string `json:"client_id"`
-	Slug       string `json:"slug"`
-	InstallURL string `json:"install_url"`
-	Bot        Bot    `json:"bot"`
-}
-
-type GitHubUser struct {
-	ID    int64  `json:"id"`
-	Login string `json:"login"`
-}
-
-type LinkResult struct {
-	InstanceID    string         `json:"instance_id"`
-	GitHubUser    GitHubUser     `json:"github_user"`
-	Installations []Installation `json:"installations"`
-	App           AppConfig      `json:"app"`
-}
-
-type Token struct {
-	Token      string    `json:"token"`
-	ExpiresAt  time.Time `json:"expires_at"`
-	Repository string    `json:"repository"`
-	Scope      Scope     `json:"scope"`
-}
-
-type ServiceError struct {
-	Status     int    `json:"-"`
-	Code       string `json:"error"`
-	Message    string `json:"message"`
-	InstallURL string `json:"install_url"`
-}
-
-func (e *ServiceError) Error() string {
-	msg := fmt.Sprintf("token service: %s (HTTP %d)", e.Code, e.Status)
-	if e.Message != "" {
-		msg += ": " + e.Message
-	}
-	if e.InstallURL != "" {
-		msg += " Install it at " + e.InstallURL
-	}
-	return msg
 }
 
 func IsServiceError(err error, code string) bool {

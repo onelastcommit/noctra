@@ -23,26 +23,6 @@ import (
 //go:embed static
 var staticFiles embed.FS
 
-type SnapshotFunc func() any
-
-type Controls interface {
-	KillRun(identifier string) error
-	RequeueTicket(ctx context.Context, identifier, extraContext, source string) error
-	PauseDispatch() bool
-	ResumeDispatch() bool
-	ClearSkipped(identifier string) error
-	TriggerSweep(opts sweep.PlanOptions) error
-}
-
-type Providers struct {
-	Store           *state.Store
-	SweepTasks      []sweep.Task
-	MaxPRIterations int
-	RepoPaths       func() []string
-	LogDir          string
-	Hub             *Hub
-}
-
 type Server struct {
 	srv        *http.Server
 	token      string
@@ -347,20 +327,6 @@ func writeLogEvent(w http.ResponseWriter, chunk string) {
 	fmt.Fprintf(w, "event: log\ndata: %s\n\n", b)
 }
 
-type historyEntry struct {
-	Identifier string  `json:"identifier"`
-	TicketID   string  `json:"ticket_id,omitempty"`
-	PRURL      string  `json:"pr_url,omitempty"`
-	Repo       string  `json:"repo"`
-	Agent      string  `json:"agent_backend,omitempty"`
-	RunType    string  `json:"run_type"`
-	Status     string  `json:"status"`
-	DurationS  float64 `json:"duration_s"`
-	StartedAt  string  `json:"started_at"`
-	FinishedAt string  `json:"finished_at,omitempty"`
-	LinearURL  string  `json:"linear_url,omitempty"`
-}
-
 func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request, store *state.Store) {
 	if store == nil {
 		writeJSON(w, []historyEntry{})
@@ -406,18 +372,6 @@ func (s *Server) handleHistory(w http.ResponseWriter, r *http.Request, store *st
 	writeJSON(w, entries)
 }
 
-type prEntry struct {
-	PRURL         string `json:"pr_url"`
-	TicketID      string `json:"ticket_id,omitempty"`
-	Iterations    int    `json:"iterations"`
-	MaxIterations int    `json:"max_iterations"`
-	Capped        bool   `json:"capped"`
-	LastCISHA     string `json:"last_ci_sha,omitempty"`
-	LastCIRunURL  string `json:"last_ci_run_url,omitempty"`
-	LastReasoning string `json:"last_reasoning,omitempty"`
-	LinearURL     string `json:"linear_url,omitempty"`
-}
-
 func (s *Server) handlePRs(w http.ResponseWriter, _ *http.Request, store *state.Store, maxIter int) {
 	if store == nil {
 		writeJSON(w, []prEntry{})
@@ -442,16 +396,6 @@ func (s *Server) handlePRs(w http.ResponseWriter, _ *http.Request, store *state.
 		entries = append(entries, e)
 	}
 	writeJSON(w, entries)
-}
-
-type sweepEntry struct {
-	Repo          string  `json:"repo"`
-	Task          string  `json:"task"`
-	Description   string  `json:"description"`
-	CooldownH     float64 `json:"cooldown_h"`
-	LastRunAt     string  `json:"last_run_at,omitempty"`
-	CooldownLeftH float64 `json:"cooldown_left_h"`
-	Eligible      bool    `json:"eligible"`
 }
 
 func (s *Server) handleSweeps(w http.ResponseWriter, _ *http.Request, store *state.Store, tasks []sweep.Task) {
@@ -504,16 +448,6 @@ func (s *Server) handleSweeps(w http.ResponseWriter, _ *http.Request, store *sta
 		entries = append(entries, e)
 	}
 	writeJSON(w, entries)
-}
-
-type costBucket struct {
-	Date        string  `json:"date"`
-	CostUSD     float64 `json:"cost_usd"`
-	TotalTokens int64   `json:"total_tokens"`
-}
-
-type costResponse struct {
-	Buckets []costBucket `json:"buckets"`
 }
 
 func (s *Server) handleCost(w http.ResponseWriter, r *http.Request, store *state.Store) {
@@ -664,12 +598,6 @@ func (s *Server) handleRetry(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("dashboard: cleared skipped", "id", id)
 	writeJSON(w, map[string]string{"status": "ok"})
-}
-
-type spendEntry struct {
-	Agent       string  `json:"agent"`
-	TotalTokens int64   `json:"total_tokens"`
-	CostUSD     float64 `json:"cost_usd"`
 }
 
 func (s *Server) handleSpend(w http.ResponseWriter, r *http.Request, store *state.Store) {

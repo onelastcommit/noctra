@@ -2,42 +2,10 @@ package plugins
 
 import (
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 )
-
-type Skill struct {
-	Path     string
-	Name     string
-	Only     []string
-	Exclude  []string
-	Requires []Requirement
-}
-
-func (s Skill) DirName() string {
-	if s.Name != "" {
-		return s.Name
-	}
-	return filepath.Base(filepath.FromSlash(s.Path))
-}
-
-type Plugin struct {
-	Name    string
-	Repo    string
-	Commit  string
-	Licence string
-	Skills  []Skill
-	Vetted  bool
-}
-
-type Pack struct {
-	Name        string
-	Description string
-	Optional    bool
-	Plugins     []Plugin
-}
 
 const (
 	BasePack = "engineering"

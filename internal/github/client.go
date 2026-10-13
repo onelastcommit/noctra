@@ -424,11 +424,6 @@ func (c *Client) PostComment(ctx context.Context, prURL, body string) error {
 	return nil
 }
 
-type ThreadReply struct {
-	Body    string
-	Resolve bool
-}
-
 func (c *Client) ReplyToThreadsByComment(ctx context.Context, prURL string, replies map[int64]ThreadReply) {
 	if len(replies) == 0 {
 		return
@@ -545,12 +540,6 @@ func decodeReviewThreads(data []byte) ([]reviewThread, error) {
 		})
 	}
 	return threads, nil
-}
-
-type InlineComment struct {
-	Path string
-	Line int
-	Body string
 }
 
 func (c *Client) PostInlineComments(ctx context.Context, prURL, commitSHA string, comments []InlineComment) int {

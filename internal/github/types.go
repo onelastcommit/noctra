@@ -1,6 +1,9 @@
 package github
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Actor struct {
 	Login string `json:"login"`
@@ -110,3 +113,16 @@ type Details struct {
 }
 
 func (d Details) IsOpen() bool { return d.State == "OPEN" }
+
+type ThreadReply struct {
+	Body    string
+	Resolve bool
+}
+
+type InlineComment struct {
+	Path string
+	Line int
+	Body string
+}
+
+type TokenSource func(ctx context.Context, ownerRepo string) (string, error)

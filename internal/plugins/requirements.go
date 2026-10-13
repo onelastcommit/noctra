@@ -9,23 +9,6 @@ import (
 	"time"
 )
 
-type Requirement struct {
-	Name    string
-	Command []string
-	Hint    string
-}
-
-type Unmet struct {
-	Plugin      string
-	Skill       string
-	Requirement Requirement
-	Err         error
-}
-
-func (u Unmet) String() string {
-	return fmt.Sprintf("%s/%s needs %s (%v); %s", u.Plugin, u.Skill, u.Requirement.Name, u.Err, u.Requirement.Hint)
-}
-
 const requirementTimeout = 90 * time.Second
 
 func CheckRequirements(ctx context.Context, plugins []Plugin) ([]Plugin, []Unmet) {

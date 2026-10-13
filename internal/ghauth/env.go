@@ -5,13 +5,6 @@ import (
 	"strings"
 )
 
-type Mode string
-
-const (
-	ModeApp   Mode = "app"
-	ModeToken Mode = "token"
-)
-
 func ResolveMode(setting string, linked bool) (Mode, error) {
 	switch strings.ToLower(strings.TrimSpace(setting)) {
 	case "", "auto":

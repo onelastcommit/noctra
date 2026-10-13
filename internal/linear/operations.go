@@ -6,17 +6,6 @@ import (
 	"sort"
 )
 
-type StateIDs struct {
-	Trigger  string
-	InReview string
-	Done     string
-}
-
-type WorkflowStateID struct {
-	ID   string
-	Name string
-}
-
 func (c *Client) ResolveStateIDs(ctx context.Context, teamKey, triggerName, inReviewName, doneName string) (StateIDs, error) {
 	states, err := c.TeamWorkflowStates(ctx, teamKey)
 	if err != nil {
@@ -122,13 +111,6 @@ func (c *Client) FetchTriggerIssues(ctx context.Context, stateName string) ([]Is
 		out = append(out, team.Issues.Nodes...)
 	}
 	return out, nil
-}
-
-type StateCount struct {
-	State    string
-	Type     string
-	Position float64
-	Count    int
 }
 
 func (c *Client) ProjectIssueCounts(ctx context.Context, projectName string) ([]StateCount, error) {

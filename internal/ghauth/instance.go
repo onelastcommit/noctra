@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"time"
 )
 
 var ErrNotLinked = errors.New("this Noctra instance is not linked to the GitHub App; run `noctra github login`")
@@ -19,24 +18,6 @@ const (
 	instanceFile = "instance.json"
 	keyFile      = "instance.key"
 )
-
-type Installation struct {
-	ID      int64  `json:"id"`
-	Account string `json:"account"`
-}
-
-type Instance struct {
-	InstanceID    string         `json:"instance_id"`
-	ServiceURL    string         `json:"service_url"`
-	GitHubUserID  int64          `json:"github_user_id"`
-	GitHubLogin   string         `json:"github_login"`
-	AppSlug       string         `json:"app_slug"`
-	BotLogin      string         `json:"bot_login"`
-	BotUserID     int64          `json:"bot_user_id"`
-	BotEmail      string         `json:"bot_email"`
-	Installations []Installation `json:"installations"`
-	LinkedAt      time.Time      `json:"linked_at"`
-}
 
 func NewKey() (ed25519.PublicKey, ed25519.PrivateKey, error) {
 	return ed25519.GenerateKey(rand.Reader)

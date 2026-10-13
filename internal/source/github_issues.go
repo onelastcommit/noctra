@@ -12,11 +12,6 @@ import (
 	"github.com/onelastcommit/noctra/internal/repo"
 )
 
-type GitHubIssuesConfig struct {
-	Repos        []string
-	TriggerLabel string
-}
-
 type GitHubIssuesSource struct {
 	cfg GitHubIssuesConfig
 }
@@ -189,33 +184,6 @@ func (s *GitHubIssuesSource) ticket(ownerRepo string, issue githubIssue) Ticket 
 			Number:    issue.Number,
 		},
 	}
-}
-
-type githubIssue struct {
-	Number   int             `json:"number"`
-	Title    string          `json:"title"`
-	Body     string          `json:"body"`
-	URL      string          `json:"url"`
-	Labels   []githubLabel   `json:"labels"`
-	Comments []githubComment `json:"comments"`
-}
-
-type githubLabel struct {
-	Name string `json:"name"`
-}
-
-type githubComment struct {
-	Body   string      `json:"body"`
-	Author githubActor `json:"author"`
-}
-
-type githubActor struct {
-	Login string `json:"login"`
-}
-
-type githubMeta struct {
-	OwnerRepo string
-	Number    int
 }
 
 func githubTicketMeta(ticket Ticket) (githubMeta, error) {

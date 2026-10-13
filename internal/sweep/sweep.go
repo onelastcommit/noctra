@@ -2,18 +2,7 @@ package sweep
 
 import (
 	"strings"
-	"time"
 )
-
-type Task struct {
-	Name         string
-	Description  string
-	Cooldown     time.Duration
-	Prompt       func(repoPath string) string
-	BranchSuffix string
-	CommitPrefix string
-	PRLabel      string
-}
 
 var catalog []Task
 

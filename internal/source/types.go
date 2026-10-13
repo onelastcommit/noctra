@@ -157,3 +157,28 @@ func IsApprovalComment(body string) bool {
 	}
 	return false
 }
+
+type GitHubIssuesConfig struct {
+	Repos        []string
+	TriggerLabel string
+}
+
+type JiraConfig struct {
+	BaseURL        string
+	UserEmail      string
+	APIToken       string
+	Project        string
+	TriggerStatus  string
+	InReviewStatus string
+	TriggerLabel   string
+}
+
+type LinearConfig struct {
+	TeamKey          string
+	TriggerMode      string
+	TriggerState     string
+	TriggerLabel     string
+	InReviewState    string
+	DoneState        string
+	PlanConfirmLabel string
+}

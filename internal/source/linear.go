@@ -7,16 +7,6 @@ import (
 	"github.com/onelastcommit/noctra/internal/linear"
 )
 
-type LinearConfig struct {
-	TeamKey          string
-	TriggerMode      string
-	TriggerState     string
-	TriggerLabel     string
-	InReviewState    string
-	DoneState        string
-	PlanConfirmLabel string
-}
-
 type LinearSource struct {
 	client             *linear.Client
 	cfg                LinearConfig

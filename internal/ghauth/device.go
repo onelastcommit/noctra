@@ -14,14 +14,6 @@ import (
 
 const DefaultGitHubWebURL = "https://github.com"
 
-type DeviceCode struct {
-	DeviceCode      string `json:"device_code"`
-	UserCode        string `json:"user_code"`
-	VerificationURI string `json:"verification_uri"`
-	ExpiresIn       int    `json:"expires_in"`
-	Interval        int    `json:"interval"`
-}
-
 type DeviceFlow struct {
 	WebURL   string
 	ClientID string

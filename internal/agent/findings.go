@@ -10,17 +10,6 @@ const (
 	FindingsEndMarker   = "===END NOCTRA FINDINGS==="
 )
 
-type FindingReply struct {
-	Finding   int    `json:"finding"`
-	Addressed bool   `json:"addressed"`
-	Respond   *bool  `json:"respond,omitempty"`
-	Reply     string `json:"reply"`
-}
-
-func (f FindingReply) Silent() bool {
-	return f.Respond != nil && !*f.Respond && !f.Addressed
-}
-
 func ExtractFindingReplies(logContents string) ([]FindingReply, bool) {
 	raw, ok := between(lastAttempt(logContents), FindingsStartMarker, FindingsEndMarker)
 	if !ok {

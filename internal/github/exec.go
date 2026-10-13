@@ -9,8 +9,6 @@ import (
 	"sync/atomic"
 )
 
-type TokenSource func(ctx context.Context, ownerRepo string) (string, error)
-
 var tokenSource atomic.Pointer[TokenSource]
 
 func SetTokenSource(src TokenSource) {

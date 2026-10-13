@@ -15,32 +15,12 @@ const sessionTTL = 5 * time.Minute
 
 const cancelCommand = "cancel"
 
-type HandlerFunc func(ctx context.Context, args string) string
-
-type Conversation interface {
-	Answer(ctx context.Context, text string) (reply string, done bool)
-}
-
-type StartFunc func(ctx context.Context, args string) (prompt string, conv Conversation)
-
 type Dispatcher struct {
 	mu       sync.Mutex
 	commands map[string]command
 	pending  *session
 
 	now func() time.Time
-}
-
-type command struct {
-	handler     HandlerFunc
-	start       StartFunc
-	description string
-}
-
-type session struct {
-	command string
-	conv    Conversation
-	expires time.Time
 }
 
 func NewDispatcher() *Dispatcher {

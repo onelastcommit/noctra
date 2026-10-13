@@ -20,21 +20,6 @@ const (
 	defaultOAuthScope     = "read,write"
 )
 
-type TokenStore interface {
-	LoadOAuth() (access string, expiresAt time.Time, refresh string)
-	SaveOAuth(access string, expiresAt time.Time, refresh string) error
-}
-
-type TokenManagerConfig struct {
-	ClientID     string
-	ClientSecret string
-	RefreshToken string
-	Scope        string
-	Endpoint     string
-	HTTP         *http.Client
-	Store        TokenStore
-}
-
 type TokenManager struct {
 	clientID     string
 	clientSecret string

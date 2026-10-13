@@ -26,11 +26,6 @@ func BranchName(identifier string) string {
 	return "noctra/" + strings.ToLower(identifier)
 }
 
-type Worktree struct {
-	Path   string
-	Branch string
-}
-
 func CreateWorktree(ctx context.Context, base, identifier, repoPath, mainBranch string) (Worktree, error) {
 	branch := BranchName(identifier)
 	wt := filepath.Join(base, identifier)
