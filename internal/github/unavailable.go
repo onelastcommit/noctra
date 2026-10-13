@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"strings"
 	"sync"
 )
@@ -45,4 +46,18 @@ func RepoFullName(ctx context.Context, ownerRepo string) (string, error) {
 		return "", fmt.Errorf("gh api repos/%s: %w: %s", ownerRepo, err, msg)
 	}
 	return strings.TrimSpace(string(out)), nil
+}
+
+func IsGitHubRemote(raw string) bool {
+	s := NormalizeRepoRef(raw)
+	switch {
+	case strings.HasPrefix(s, "git@"):
+		host, _, _ := strings.Cut(strings.TrimPrefix(s, "git@"), ":")
+		return strings.EqualFold(host, "github.com")
+	case strings.HasPrefix(s, "https://"), strings.HasPrefix(s, "http://"):
+		u, err := url.Parse(s)
+		return err == nil && strings.EqualFold(u.Hostname(), "github.com")
+	default:
+		return looksLikeOwnerRepo(strings.TrimSuffix(s, ".git"))
+	}
 }

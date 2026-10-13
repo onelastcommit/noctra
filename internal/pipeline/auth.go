@@ -41,6 +41,9 @@ func (p *Pipeline) linearConfigured() bool {
 func (p *Pipeline) knownOwnerRepos(ctx context.Context) []string {
 	var repos []string
 	for _, remote := range p.resolver.AllRepoRemotes(ctx) {
+		if !github.IsGitHubRemote(remote) {
+			continue
+		}
 		if ownerRepo, err := github.ExtractOwnerRepo(remote); err == nil {
 			repos = append(repos, ownerRepo)
 		}

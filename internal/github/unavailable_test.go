@@ -58,3 +58,21 @@ func TestRepoFullName_SurfacesAFailedMint(t *testing.T) {
 		t.Fatalf("a failed mint must surface as ErrAppNotInstalled, got %v", err)
 	}
 }
+
+func TestIsGitHubRemote(t *testing.T) {
+	cases := map[string]bool{
+		"https://github.com/o/r":                             true,
+		"https://GitHub.com/o/r.git":                         true,
+		"git@github.com:o/r.git":                             true,
+		"o/r":                                                true,
+		"git@gitlab.com:team/repo.git":                       false,
+		"https://gitlab.com/team/repo":                       false,
+		"https://github.example.com/o/r":                     false,
+		"[https://github.com/o/r](<https://github.com/o/r>)": true,
+	}
+	for remote, want := range cases {
+		if got := IsGitHubRemote(remote); got != want {
+			t.Errorf("IsGitHubRemote(%q) = %v, want %v", remote, got, want)
+		}
+	}
+}
