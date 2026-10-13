@@ -132,12 +132,24 @@ func TestTailWorthy_KeepsFailureSignalsDropsConversation(t *testing.T) {
 		{"result with text", claudeStreamEvent{Type: "result", Result: "done"}, false},
 		{"error result without text", claudeStreamEvent{Type: "result"}, true},
 		{"unknown type", claudeStreamEvent{Type: "surprise"}, true},
+		{"tool_progress heartbeat", claudeStreamEvent{Type: "tool_progress"}, false},
+		{"system thinking_tokens", claudeStreamEvent{Type: "system", Subtype: "thinking_tokens"}, false},
+		{"system task_started", claudeStreamEvent{Type: "system", Subtype: "task_started"}, false},
+		{"system task_notification", claudeStreamEvent{Type: "system", Subtype: "task_notification"}, false},
+		{"rate limit allowed", rateLimitEvent("allowed"), false},
+		{"rate limit rejected", rateLimitEvent("rejected"), true},
 	}
 	for _, tc := range cases {
 		if got := tailWorthy(tc.ev); got != tc.want {
 			t.Errorf("tailWorthy(%s) = %v, want %v", tc.name, got, tc.want)
 		}
 	}
+}
+
+func rateLimitEvent(status string) claudeStreamEvent {
+	ev := claudeStreamEvent{Type: "rate_limit_event"}
+	ev.RateLimit.Status = status
+	return ev
 }
 
 func TestStreamTail_BoundsSizeKeepingNewest(t *testing.T) {

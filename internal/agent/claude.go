@@ -76,7 +76,10 @@ type claudeStreamEvent struct {
 	Model        string                `json:"model"`
 	ModelUsage   map[string]modelShare `json:"modelUsage"`
 	Usage        claudeUsage           `json:"usage"`
-	Message      struct {
+	RateLimit    struct {
+		Status string `json:"status"`
+	} `json:"rate_limit_info"`
+	Message struct {
 		Model string      `json:"model"`
 		Usage claudeUsage `json:"usage"`
 	} `json:"message"`
@@ -132,12 +135,24 @@ func (t *streamTail) String() string {
 	return string(bytes.Join(t.lines, []byte("\n")))
 }
 
+var claudeProgressSubtypes = map[string]bool{
+	"init":                     true,
+	"thinking_tokens":          true,
+	"task_started":             true,
+	"task_progress":            true,
+	"task_updated":             true,
+	"task_notification":        true,
+	"background_tasks_changed": true,
+}
+
 func tailWorthy(ev claudeStreamEvent) bool {
 	switch ev.Type {
-	case "assistant", "user":
+	case "assistant", "user", "tool_progress":
 		return false
+	case "rate_limit_event":
+		return ev.RateLimit.Status != "allowed"
 	case "system":
-		return ev.Subtype != "init"
+		return !claudeProgressSubtypes[ev.Subtype]
 	case "result":
 		return ev.Result == ""
 	}
@@ -222,7 +237,7 @@ func (b claudeBackend) runCapped(ctx context.Context, opts RunOptions, env []str
 
 	body := result
 	if tail.size > 0 {
-		body += "\n\n[noctra] non-result stream events:\n" + tail.String()
+		body += "\n\n" + StreamEventsHeader + "\n" + tail.String()
 	}
 	if aborted {
 		body += fmt.Sprintf("\n\n[noctra] run aborted: per-run token ceiling %d reached (cumulative ~%d)", opts.MaxTokens, cumTokens)

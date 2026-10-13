@@ -112,6 +112,7 @@ func ReleaseLabel(bump, defaultBump string) string {
 const (
 	SummaryStartMarker = "===NOCTRA SUMMARY==="
 	SummaryEndMarker   = "===END NOCTRA SUMMARY==="
+	StreamEventsHeader = "[noctra] non-result stream events:"
 )
 
 func ExtractSummary(logContents string) string {
@@ -121,6 +122,10 @@ func ExtractSummary(logContents string) string {
 
 	if s, ok := betweenMarkers(last); ok {
 		return s
+	}
+
+	if i := strings.Index(last, StreamEventsHeader); i >= 0 {
+		last = last[:i]
 	}
 
 	var kept []string

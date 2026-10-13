@@ -128,6 +128,17 @@ func TestExtractSummary_FallbackStripsUsageFooter(t *testing.T) {
 	}
 }
 
+func TestExtractSummary_FallbackExcludesStreamEvents(t *testing.T) {
+	log := "--- Attempt 2024-01-01T01:00:00 ---\n" +
+		"Implemented the feature.\n\n" +
+		StreamEventsHeader + "\n" +
+		`{"type":"system","subtype":"api_retry"}` + "\n"
+	got := ExtractSummary(log)
+	if got != "Implemented the feature." {
+		t.Errorf("fallback should stop before stream events, got: %q", got)
+	}
+}
+
 func TestReleaseBump(t *testing.T) {
 	tests := []struct {
 		name   string
