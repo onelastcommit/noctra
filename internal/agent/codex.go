@@ -14,7 +14,7 @@ func (codexBackend) CoAuthor() string { return "Codex <noreply@openai.com>" }
 
 func (b codexBackend) Run(ctx context.Context, opts RunOptions) (Usage, error) {
 	defer stageSkills(opts)()
-	out, err := runCLI(ctx, b.CLI(), codexArgs(opts), nil, opts)
+	out, err := runCLI(ctx, b.CLI(), codexArgs(opts), nil, opts, nil)
 	usage := ParseUsage(out)
 	usage.Model = codexModel(out)
 	return usage, err
@@ -40,5 +40,5 @@ func codexArgs(opts RunOptions) []string {
 var codexRateLimitRe = regexp.MustCompile(`(?i)rate.?limit|usage.?limit|quota|exceeded.*limit|too many requests`)
 
 func (codexBackend) HasRateLimit(output string) bool {
-	return codexRateLimitRe.MatchString(output)
+	return codexRateLimitRe.MatchString(withoutToolLines(output))
 }

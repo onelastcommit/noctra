@@ -81,20 +81,13 @@ func TestBackend_CLIAndLabel(t *testing.T) {
 	}
 }
 
-func TestClaudeArgs_PassesPromptInPrintMode(t *testing.T) {
-	args := claudeArgs(RunOptions{Prompt: "do the thing"})
+func TestClaudeStreamArgs_PassesPromptInPrintMode(t *testing.T) {
+	args := claudeStreamArgs(RunOptions{Prompt: "do the thing"})
 	if !slices.Contains(args, "--print") {
-		t.Errorf("claudeArgs missing --print: %v", args)
+		t.Errorf("claudeStreamArgs missing --print: %v", args)
 	}
 	if !slices.Contains(args, "--dangerously-skip-permissions") {
-		t.Errorf("claudeArgs missing permission bypass: %v", args)
-	}
-	i := slices.Index(args, "-p")
-	if i < 0 || i+1 >= len(args) || args[i+1] != "do the thing" {
-		t.Errorf("claudeArgs did not pass prompt after -p: %v", args)
-	}
-	if of := slices.Index(args, "--output-format"); of < 0 || of+1 >= len(args) || args[of+1] != "json" {
-		t.Errorf("claudeArgs must request --output-format json: %v", args)
+		t.Errorf("claudeStreamArgs missing permission bypass: %v", args)
 	}
 }
 
@@ -137,6 +130,9 @@ func TestTailWorthy_KeepsFailureSignalsDropsConversation(t *testing.T) {
 		{"system task_started", claudeStreamEvent{Type: "system", Subtype: "task_started"}, false},
 		{"system task_notification", claudeStreamEvent{Type: "system", Subtype: "task_notification"}, false},
 		{"rate limit allowed", rateLimitEvent("allowed"), false},
+		{"system hook_started", claudeStreamEvent{Type: "system", Subtype: "hook_started"}, false},
+		{"successful hook", claudeStreamEvent{Type: "system", Subtype: "hook_response", Outcome: "success"}, false},
+		{"failed hook", claudeStreamEvent{Type: "system", Subtype: "hook_response", Outcome: "error"}, true},
 		{"rate limit rejected", rateLimitEvent("rejected"), true},
 	}
 	for _, tc := range cases {
@@ -199,8 +195,8 @@ func TestCopilotArgs_UsesAllowAllToolsAndPromptFlag(t *testing.T) {
 	if !slices.Contains(args, "--no-ask-user") {
 		t.Errorf("copilotArgs missing --no-ask-user: %v", args)
 	}
-	if !slices.Contains(args, "--silent") {
-		t.Errorf("copilotArgs missing --silent, so its transcript would reach the response block: %v", args)
+	if of := slices.Index(args, "--output-format"); of < 0 || of+1 >= len(args) || args[of+1] != "json" {
+		t.Errorf("copilotArgs must request --output-format json so tool calls and the answer can be separated: %v", args)
 	}
 	i := slices.Index(args, "-p")
 	if i < 0 || i+1 >= len(args) || args[i+1] != "do the thing" {
@@ -375,7 +371,7 @@ func TestChildEnv_MergesRunEnvOverParent(t *testing.T) {
 
 func TestClaudeArgs_LoadPluginsBeforeThePrompt(t *testing.T) {
 	opts := RunOptions{Prompt: "do the thing", PluginDirs: []string{"/p/superpowers@abc", "/p/impeccable@def"}}
-	for name, args := range map[string][]string{"json": claudeArgs(opts), "stream": claudeStreamArgs(opts)} {
+	for name, args := range map[string][]string{"stream": claudeStreamArgs(opts)} {
 		var dirs []string
 		for i, a := range args {
 			if a == "--plugin-dir" && i+1 < len(args) {
@@ -392,7 +388,7 @@ func TestClaudeArgs_LoadPluginsBeforeThePrompt(t *testing.T) {
 }
 
 func TestClaudeArgs_NoPluginFlagsWithoutPlugins(t *testing.T) {
-	if slices.Contains(claudeArgs(RunOptions{Prompt: "x"}), "--plugin-dir") {
-		t.Error("claudeArgs added --plugin-dir with no plugins")
+	if slices.Contains(claudeStreamArgs(RunOptions{Prompt: "x"}), "--plugin-dir") {
+		t.Error("claudeStreamArgs added --plugin-dir with no plugins")
 	}
 }

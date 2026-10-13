@@ -25,28 +25,7 @@ func (b claudeBackend) Run(ctx context.Context, opts RunOptions) (Usage, error) 
 		env = append(os.Environ(), "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1")
 	}
 
-	if opts.MaxTokens > 0 {
-		return b.runCapped(ctx, opts, env)
-	}
-
-	stdout, stderr, err := runCLICapture(ctx, b.CLI(), claudeArgs(opts), env, opts)
-
-	if usage, result, ok := ParseClaudeJSON(stdout); ok {
-		writeRunLog(ctx, opts, stderr, result)
-		return usage, err
-	}
-	writeRunLog(ctx, opts, stderr, stdout)
-	return ParseUsage(stdout + "\n" + stderr), err
-}
-
-func claudeArgs(opts RunOptions) []string {
-	args := []string{
-		"--dangerously-skip-permissions",
-		"--print",
-		"--output-format", "json",
-	}
-	args = append(args, claudePluginArgs(opts)...)
-	return append(args, "-p", opts.Prompt)
+	return b.runStream(ctx, opts, env)
 }
 
 func claudeStreamArgs(opts RunOptions) []string {
@@ -76,12 +55,18 @@ type claudeStreamEvent struct {
 	Model        string                `json:"model"`
 	ModelUsage   map[string]modelShare `json:"modelUsage"`
 	Usage        claudeUsage           `json:"usage"`
+	Outcome      string                `json:"outcome"`
 	RateLimit    struct {
 		Status string `json:"status"`
 	} `json:"rate_limit_info"`
 	Message struct {
-		Model string      `json:"model"`
-		Usage claudeUsage `json:"usage"`
+		Model   string      `json:"model"`
+		Usage   claudeUsage `json:"usage"`
+		Content []struct {
+			Type  string          `json:"type"`
+			Name  string          `json:"name"`
+			Input json.RawMessage `json:"input"`
+		} `json:"content"`
 	} `json:"message"`
 }
 
@@ -143,6 +128,8 @@ var claudeProgressSubtypes = map[string]bool{
 	"task_updated":             true,
 	"task_notification":        true,
 	"background_tasks_changed": true,
+	"hook_started":             true,
+	"hook_progress":            true,
 }
 
 func tailWorthy(ev claudeStreamEvent) bool {
@@ -152,6 +139,9 @@ func tailWorthy(ev claudeStreamEvent) bool {
 	case "rate_limit_event":
 		return ev.RateLimit.Status != "allowed"
 	case "system":
+		if ev.Subtype == "hook_response" {
+			return ev.Outcome != "success"
+		}
 		return !claudeProgressSubtypes[ev.Subtype]
 	case "result":
 		return ev.Result == ""
@@ -159,7 +149,7 @@ func tailWorthy(ev claudeStreamEvent) bool {
 	return true
 }
 
-func (b claudeBackend) runCapped(ctx context.Context, opts RunOptions, env []string) (Usage, error) {
+func (b claudeBackend) runStream(ctx context.Context, opts RunOptions, env []string) (Usage, error) {
 	runCtx, cancel := context.WithCancel(ctx)
 	if opts.Timeout > 0 {
 		runCtx, cancel = context.WithTimeout(ctx, opts.Timeout)
@@ -177,6 +167,11 @@ func (b claudeBackend) runCapped(ctx context.Context, opts RunOptions, env []str
 	if err != nil {
 		return Usage{}, fmt.Errorf("stdout pipe: %w", err)
 	}
+	logF, err := openRunLog(ctx, opts)
+	if err != nil {
+		return Usage{}, err
+	}
+	defer logF.Close()
 	if err := cmd.Start(); err != nil {
 		return Usage{}, fmt.Errorf("start claude: %w", err)
 	}
@@ -201,6 +196,11 @@ func (b claudeBackend) runCapped(ctx context.Context, opts RunOptions, env []str
 			} else {
 				switch ev.Type {
 				case "assistant":
+					for _, c := range ev.Message.Content {
+						if c.Type == "tool_use" {
+							fmt.Fprintln(logF, toolCallLine(c.Name, c.Input))
+						}
+					}
 					if ev.Message.Model != "" {
 						model = ev.Message.Model
 						share := seen[model]
@@ -242,7 +242,7 @@ func (b claudeBackend) runCapped(ctx context.Context, opts RunOptions, env []str
 	if aborted {
 		diagnostics += fmt.Sprintf("[noctra] run aborted: per-run token ceiling %d reached (cumulative ~%d)\n\n", opts.MaxTokens, cumTokens)
 	}
-	writeRunLog(ctx, opts, diagnostics+stderr.String(), result)
+	writeRunTrailer(logF, diagnostics+stderr.String(), result)
 
 	if final.TotalTokens == 0 && cumTokens > 0 {
 		final = cumUsage.toUsage(model)
@@ -268,5 +268,5 @@ func (b claudeBackend) runCapped(ctx context.Context, opts RunOptions, env []str
 var claudeRateLimitRe = regexp.MustCompile(`(?i)rate.limit|usage.limit|exceeded.*limit|too many requests`)
 
 func (claudeBackend) HasRateLimit(output string) bool {
-	return claudeRateLimitRe.MatchString(output)
+	return claudeRateLimitRe.MatchString(withoutToolLines(output))
 }

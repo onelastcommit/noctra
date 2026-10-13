@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -20,7 +21,7 @@ func (copilotBackend) CoAuthor() string {
 
 func (b copilotBackend) Run(ctx context.Context, opts RunOptions) (Usage, error) {
 	defer stageSkills(opts)()
-	out, err := runCLI(ctx, b.CLI(), copilotArgs(opts), copilotEnv(ctx), opts)
+	out, err := runCLI(ctx, b.CLI(), copilotArgs(opts), copilotEnv(ctx), opts, &copilotParser{})
 	return ParseUsage(out), err
 }
 
@@ -55,13 +56,59 @@ func copilotArgs(opts RunOptions) []string {
 	return []string{
 		"--allow-all-tools",
 		"--no-ask-user",
-		"--silent",
+		"--output-format", "json",
 		"-p", opts.Prompt,
 	}
 }
 
+type copilotEvent struct {
+	Type     string `json:"type"`
+	ExitCode *int   `json:"exitCode"`
+	Data     struct {
+		ToolName  string          `json:"toolName"`
+		Arguments json.RawMessage `json:"arguments"`
+		Content   string          `json:"content"`
+		Phase     string          `json:"phase"`
+	} `json:"data"`
+}
+
+type copilotParser struct {
+	final, last string
+	diag        streamTail
+}
+
+func (p *copilotParser) feed(line []byte) string {
+	var ev copilotEvent
+	if json.Unmarshal(line, &ev) != nil {
+		p.diag.add(line)
+		return ""
+	}
+	switch {
+	case ev.Type == "tool.execution_start":
+		return toolCallLine(ev.Data.ToolName, ev.Data.Arguments)
+	case ev.Type == "assistant.message" && ev.Data.Content != "":
+		p.last = ev.Data.Content
+		if ev.Data.Phase == "final_answer" {
+			p.final = ev.Data.Content
+		}
+	case ev.Type == "result" && ev.ExitCode != nil && *ev.ExitCode != 0,
+		strings.Contains(ev.Type, "error"), strings.Contains(ev.Type, "warn"):
+		p.diag.add(line)
+	}
+	return ""
+}
+
+func (p *copilotParser) response() string {
+	if p.final != "" {
+		return p.final
+	}
+	return p.last
+}
+
+func (p *copilotParser) diagnostics() string { return p.diag.String() }
+
 var copilotRateLimitRe = regexp.MustCompile(`(?i)rate.?limit|usage.?limit|quota|exceeded.*limit|too many requests`)
 
 func (copilotBackend) HasRateLimit(output string) bool {
-	return copilotRateLimitRe.MatchString(output)
+	return copilotRateLimitRe.MatchString(withoutToolLines(output))
 }

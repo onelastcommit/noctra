@@ -74,36 +74,44 @@ func New(name string) (Backend, error) {
 	}
 }
 
-func runCLI(ctx context.Context, bin string, args, env []string, opts RunOptions) (string, error) {
+func runCLI(ctx context.Context, bin string, args, env []string, opts RunOptions, parser streamParser) (string, error) {
 	if opts.Timeout > 0 {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
 		defer cancel()
 	}
 
-	logF, err := os.OpenFile(opts.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	logF, err := openRunLog(ctx, opts)
 	if err != nil {
-		return "", fmt.Errorf("open log: %w", err)
+		return "", err
 	}
 	defer logF.Close()
-
-	branch, _ := currentBranch(ctx, opts.Workdir)
-	fmt.Fprintf(logF, "DEBUG: pwd = %s\nDEBUG: branch = %s\n", opts.Workdir, branch)
+	logW := &syncWriter{w: logF}
 
 	var (
 		combined lockedBuffer
 		stdout   bytes.Buffer
+		parsing  *parsingWriter
 	)
 	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.Dir = opts.Workdir
 	cmd.Stdout = io.MultiWriter(&stdout, &combined)
-	cmd.Stderr = io.MultiWriter(logF, &combined)
+	if parser != nil {
+		parsing = &parsingWriter{parser: parser, log: logW}
+		cmd.Stdout = io.MultiWriter(parsing, &combined)
+	}
+	cmd.Stderr = io.MultiWriter(logW, &combined)
 	if env := childEnv(env, opts); env != nil {
 		cmd.Env = env
 	}
 
 	err = cmd.Run()
-	writeResponseBlock(logF, stdout.String())
+	if parsing != nil {
+		parsing.flush()
+		writeRunTrailer(logF, parser.diagnostics(), parser.response())
+	} else {
+		writeRunTrailer(logF, "", stdout.String())
+	}
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
 			return combined.String(), fmt.Errorf("%w: %w", ErrTimedOut, err)
@@ -130,41 +138,21 @@ func (b *lockedBuffer) String() string {
 	return b.buf.String()
 }
 
-func runCLICapture(ctx context.Context, bin string, args, env []string, opts RunOptions) (stdout, stderr string, err error) {
-	if opts.Timeout > 0 {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, opts.Timeout)
-		defer cancel()
-	}
-
-	var outBuf, errBuf bytes.Buffer
-	cmd := exec.CommandContext(ctx, bin, args...)
-	cmd.Dir = opts.Workdir
-	cmd.Stdout = &outBuf
-	cmd.Stderr = &errBuf
-	if env := childEnv(env, opts); env != nil {
-		cmd.Env = env
-	}
-
-	runErr := cmd.Run()
-	if runErr != nil && ctx.Err() == context.DeadlineExceeded {
-		runErr = fmt.Errorf("%w: %w", ErrTimedOut, runErr)
-	}
-	return outBuf.String(), errBuf.String(), runErr
-}
-
-func writeRunLog(ctx context.Context, opts RunOptions, diagnostics, response string) {
+func openRunLog(ctx context.Context, opts RunOptions) (*os.File, error) {
 	logF, err := os.OpenFile(opts.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		return
+		return nil, fmt.Errorf("open log: %w", err)
 	}
-	defer logF.Close()
 	branch, _ := currentBranch(ctx, opts.Workdir)
 	fmt.Fprintf(logF, "DEBUG: pwd = %s\nDEBUG: branch = %s\n", opts.Workdir, branch)
+	return logF, nil
+}
+
+func writeRunTrailer(w io.Writer, diagnostics, response string) {
 	if d := strings.TrimSpace(diagnostics); d != "" {
-		fmt.Fprintln(logF, d)
+		fmt.Fprintln(w, d)
 	}
-	writeResponseBlock(logF, response)
+	writeResponseBlock(w, response)
 }
 
 func writeResponseBlock(w io.Writer, response string) {
