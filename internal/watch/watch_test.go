@@ -480,3 +480,76 @@ func TestDiff_InlineReplyCarriesThreadRootAndParent(t *testing.T) {
 		t.Errorf("ReplyTo should carry the parent comment, got %+v", ev.ReplyTo)
 	}
 }
+
+func TestDiff_TrustedBotInlineCommentMatchesDespiteBotSuffix(t *testing.T) {
+	w := newTestWatcher(t, []string{"chatgpt-codex-connector"})
+	pr := github.PR{URL: "https://github.com/me/repo/pull/1"}
+	details := &github.Details{
+		State: "OPEN",
+		ReviewComments: []github.ReviewComment{{
+			ID:        4254915144,
+			Author:    github.Actor{Login: "chatgpt-codex-connector[bot]", Type: "Bot"},
+			Body:      "**P1** Restrict launch counts to the 90-day window",
+			CreatedAt: time.Date(2026, 10, 13, 5, 4, 22, 0, time.UTC),
+			Path:      "packages/database/src/repositories/metrics-repository.ts",
+		}},
+	}
+
+	ch := w.diff(pr, details, state.PRState{})
+	if len(ch.Events) != 1 {
+		t.Fatalf("REST reports bots as <login>[bot]; a trusted bot's inline finding must still act, got %d events", len(ch.Events))
+	}
+	if ch.Events[0].ThreadID != "4254915144" {
+		t.Errorf("inline finding must keep its thread so the reply lands there, got %q", ch.Events[0].ThreadID)
+	}
+}
+
+func TestNew_TrustedReviewersAcceptBotSuffix(t *testing.T) {
+	w := newTestWatcher(t, []string{"Gemini-Code-Assist[bot]"})
+	for _, login := range []string{"gemini-code-assist", "gemini-code-assist[bot]"} {
+		if !w.actionable(Event{Type: EventComment, Author: github.Actor{Login: login, Type: "Bot"}, Body: "Consider this"}) {
+			t.Errorf("%s should be trusted when TRUSTED_REVIEWERS lists the [bot] form", login)
+		}
+	}
+}
+
+func TestDiff_CodexBoilerplateIsSkippedButFindingsAct(t *testing.T) {
+	w := newTestWatcher(t, []string{"chatgpt-codex-connector"})
+	pr := github.PR{URL: "https://github.com/me/repo/pull/1"}
+	codex := github.Actor{Login: "chatgpt-codex-connector", Type: "Bot"}
+	details := &github.Details{
+		State: "OPEN",
+		Comments: []github.Comment{
+			{Author: github.Actor{Login: "ahmad"}, Body: "@codex review", CreatedAt: time.Date(2026, 10, 13, 5, 1, 53, 0, time.UTC)},
+			{Author: codex, Body: "<!-- codex-pull-request-review-summary -->\n\n## Codex Review Summary\n\n| Review | Status |", CreatedAt: time.Date(2026, 10, 13, 5, 2, 8, 0, time.UTC)},
+		},
+		Reviews: []github.Review{{
+			Author: codex, State: "COMMENTED",
+			Body:        "### 💡 Codex Review\n\nHere are some automated review suggestions for this pull request.",
+			SubmittedAt: time.Date(2026, 10, 13, 5, 4, 22, 0, time.UTC),
+		}},
+		ReviewComments: []github.ReviewComment{{
+			ID:        7,
+			Author:    github.Actor{Login: "chatgpt-codex-connector[bot]", Type: "Bot"},
+			Body:      "**P1** Restrict launch counts to the 90-day window",
+			CreatedAt: time.Date(2026, 10, 13, 5, 4, 22, 0, time.UTC),
+			Path:      "metrics-repository.ts",
+		}},
+	}
+
+	ch := w.diff(pr, details, state.PRState{})
+	if len(ch.Events) != 1 || ch.Events[0].Path != "metrics-repository.ts" {
+		t.Fatalf("only the inline finding should act, got %+v", ch.Events)
+	}
+	if len(ch.Skipped) != 3 {
+		t.Errorf("the command, status comment and review boilerplate should be skipped, got %d", len(ch.Skipped))
+	}
+}
+
+func TestDiff_HumanQuotingCodexHeaderStillActs(t *testing.T) {
+	w := newTestWatcher(t, nil)
+	ev := Event{Type: EventReview, Author: github.Actor{Login: "ahmad"}, Body: "### 💡 Codex Review was wrong here, please revert"}
+	if !w.actionable(ev) {
+		t.Error("boilerplate detection must only apply to bots")
+	}
+}

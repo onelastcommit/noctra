@@ -470,7 +470,6 @@ func (p *Pipeline) recordIteration(ctx context.Context, ch watch.PRChanges, iden
 		lastReview    time.Time
 		lastCISHA     string
 		lastReasoning string
-		lastCIRunURL  string
 	)
 	if err := p.store.Update(ch.PR.URL, func(r *state.PRState) {
 		if r.TicketID == "" {
@@ -495,7 +494,6 @@ func (p *Pipeline) recordIteration(ctx context.Context, ch watch.PRChanges, iden
 		lastReview = r.LastReviewAt
 		lastCISHA = r.LastCISHA
 		lastReasoning = r.LastReasoning
-		lastCIRunURL = r.LastCIRunURL
 	}); err != nil {
 		slog.Warn("pipeline: state update failed", "url", ch.PR.URL, "err", err)
 		return
@@ -509,7 +507,7 @@ func (p *Pipeline) recordIteration(ctx context.Context, ch watch.PRChanges, iden
 	)
 
 	if iterations >= p.cfg.MaxPRIterations {
-		reason := capReason(lastReasoning, lastCIRunURL)
+		reason := capReason(lastReasoning, iterationCIRunURL(ch))
 		msg := fmt.Sprintf("🛑 *%s* — PR #%d hit iteration cap (%d attempts). Needs human attention.",
 			notify.EscapeMarkdown(displayName(identifier)), prNumber, iterations)
 		if reason != "" {
@@ -684,6 +682,13 @@ func displayName(identifier string) string {
 		return fmt.Sprintf("Sweep: %s on %s", task, repoSlug)
 	}
 	return identifier
+}
+
+func iterationCIRunURL(ch watch.PRChanges) string {
+	if ch.CIFailure == nil || len(ch.CIFailure.FailedChecks) == 0 {
+		return ""
+	}
+	return ch.CIFailure.FailedChecks[0].URL()
 }
 
 func capReason(reasoning, ciRunURL string) string {
