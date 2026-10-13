@@ -249,11 +249,21 @@ func Activate(cfg *config.Config) (*ghauth.Session, error) {
 	if err := sess.Activate(); err != nil {
 		return nil, err
 	}
-	github.SetTokenSource(sess.GHToken)
+	github.SetTokenSource(appTokenSource(sess.GHToken))
 	ghauth.SetActive(sess)
 	if cfg.AgentTimeout > maxSafeAgentTimeout {
 		slog.Warn("github app: AGENT_TIMEOUT_MINUTES exceeds 50; an agent's GH_TOKEN (valid one hour) may expire before the run ends",
 			"timeout", cfg.AgentTimeout)
 	}
 	return sess, nil
+}
+
+func appTokenSource(mint github.TokenSource) github.TokenSource {
+	return func(ctx context.Context, ownerRepo string) (string, error) {
+		token, err := mint(ctx, ownerRepo)
+		if ghauth.IsServiceError(err, "not_installed") {
+			return "", fmt.Errorf("%w: %w", github.ErrAppNotInstalled, err)
+		}
+		return token, err
+	}
 }

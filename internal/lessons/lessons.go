@@ -32,7 +32,7 @@ func ProcessMergedPRs(ctx context.Context, store *state.Store, gh *github.Client
 
 		details, err := gh.GetPR(ctx, prURL)
 		if err != nil {
-			logger.Warn("lessons: failed to get PR details", "err", err)
+			github.WarnRepoUnavailable(logger, "lessons: failed to get PR details", repoOfPR(prURL), err)
 			continue
 		}
 
@@ -174,4 +174,10 @@ func extractOwnerRepoFromPRURL(prURL string) (string, error) {
 		return "", fmt.Errorf("PR URL path too short: %q", u.Path)
 	}
 	return parts[0] + "/" + parts[1], nil
+}
+func repoOfPR(prURL string) string {
+	if ownerRepo, err := extractOwnerRepoFromPRURL(prURL); err == nil {
+		return ownerRepo
+	}
+	return prURL
 }
