@@ -55,6 +55,7 @@ func copilotArgs(opts RunOptions) []string {
 	return []string{
 		"--allow-all-tools",
 		"--no-ask-user",
+		"--silent",
 		"-p", opts.Prompt,
 	}
 }
