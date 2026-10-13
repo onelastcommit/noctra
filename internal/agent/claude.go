@@ -32,10 +32,10 @@ func (b claudeBackend) Run(ctx context.Context, opts RunOptions) (Usage, error) 
 	stdout, stderr, err := runCLICapture(ctx, b.CLI(), claudeArgs(opts), env, opts)
 
 	if usage, result, ok := ParseClaudeJSON(stdout); ok {
-		writeRunLog(ctx, opts, result+stderr)
+		writeRunLog(ctx, opts, stderr, result)
 		return usage, err
 	}
-	writeRunLog(ctx, opts, stdout+stderr)
+	writeRunLog(ctx, opts, stderr, stdout)
 	return ParseUsage(stdout + "\n" + stderr), err
 }
 
@@ -235,14 +235,14 @@ func (b claudeBackend) runCapped(ctx context.Context, opts RunOptions, env []str
 	}
 	waitErr := cmd.Wait()
 
-	body := result
+	var diagnostics string
 	if tail.size > 0 {
-		body += "\n\n" + StreamEventsHeader + "\n" + tail.String()
+		diagnostics += "[noctra] non-result stream events:\n" + tail.String() + "\n\n"
 	}
 	if aborted {
-		body += fmt.Sprintf("\n\n[noctra] run aborted: per-run token ceiling %d reached (cumulative ~%d)", opts.MaxTokens, cumTokens)
+		diagnostics += fmt.Sprintf("[noctra] run aborted: per-run token ceiling %d reached (cumulative ~%d)\n\n", opts.MaxTokens, cumTokens)
 	}
-	writeRunLog(ctx, opts, body+stderr.String())
+	writeRunLog(ctx, opts, diagnostics+stderr.String(), result)
 
 	if final.TotalTokens == 0 && cumTokens > 0 {
 		final = cumUsage.toUsage(model)

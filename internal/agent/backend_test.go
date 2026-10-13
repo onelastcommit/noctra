@@ -199,6 +199,9 @@ func TestCopilotArgs_UsesAllowAllToolsAndPromptFlag(t *testing.T) {
 	if !slices.Contains(args, "--no-ask-user") {
 		t.Errorf("copilotArgs missing --no-ask-user: %v", args)
 	}
+	if !slices.Contains(args, "--silent") {
+		t.Errorf("copilotArgs missing --silent, so its transcript would reach the response block: %v", args)
+	}
 	i := slices.Index(args, "-p")
 	if i < 0 || i+1 >= len(args) || args[i+1] != "do the thing" {
 		t.Errorf("copilotArgs did not pass prompt after -p: %v", args)

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/onelastcommit/noctra/internal/ghauth"
@@ -89,22 +90,44 @@ func runCLI(ctx context.Context, bin string, args, env []string, opts RunOptions
 	branch, _ := currentBranch(ctx, opts.Workdir)
 	fmt.Fprintf(logF, "DEBUG: pwd = %s\nDEBUG: branch = %s\n", opts.Workdir, branch)
 
-	var buf bytes.Buffer
+	var (
+		combined lockedBuffer
+		stdout   bytes.Buffer
+	)
 	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.Dir = opts.Workdir
-	cmd.Stdout = io.MultiWriter(logF, &buf)
-	cmd.Stderr = io.MultiWriter(logF, &buf)
+	cmd.Stdout = io.MultiWriter(&stdout, &combined)
+	cmd.Stderr = io.MultiWriter(logF, &combined)
 	if env := childEnv(env, opts); env != nil {
 		cmd.Env = env
 	}
 
-	if err := cmd.Run(); err != nil {
+	err = cmd.Run()
+	writeResponseBlock(logF, stdout.String())
+	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
-			return buf.String(), fmt.Errorf("%w: %w", ErrTimedOut, err)
+			return combined.String(), fmt.Errorf("%w: %w", ErrTimedOut, err)
 		}
-		return buf.String(), err
+		return combined.String(), err
 	}
-	return buf.String(), nil
+	return combined.String(), nil
+}
+
+type lockedBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *lockedBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *lockedBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }
 
 func runCLICapture(ctx context.Context, bin string, args, env []string, opts RunOptions) (stdout, stderr string, err error) {
@@ -130,7 +153,7 @@ func runCLICapture(ctx context.Context, bin string, args, env []string, opts Run
 	return outBuf.String(), errBuf.String(), runErr
 }
 
-func writeRunLog(ctx context.Context, opts RunOptions, body string) {
+func writeRunLog(ctx context.Context, opts RunOptions, diagnostics, response string) {
 	logF, err := os.OpenFile(opts.LogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return
@@ -138,7 +161,17 @@ func writeRunLog(ctx context.Context, opts RunOptions, body string) {
 	defer logF.Close()
 	branch, _ := currentBranch(ctx, opts.Workdir)
 	fmt.Fprintf(logF, "DEBUG: pwd = %s\nDEBUG: branch = %s\n", opts.Workdir, branch)
-	fmt.Fprintln(logF, strings.TrimRight(body, "\n"))
+	if d := strings.TrimSpace(diagnostics); d != "" {
+		fmt.Fprintln(logF, d)
+	}
+	writeResponseBlock(logF, response)
+}
+
+func writeResponseBlock(w io.Writer, response string) {
+	fmt.Fprintln(w, ResponseHeader)
+	if r := strings.TrimRight(response, "\n"); r != "" {
+		fmt.Fprintln(w, r)
+	}
 }
 
 func currentBranch(ctx context.Context, workdir string) (string, error) {

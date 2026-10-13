@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
@@ -128,14 +129,38 @@ func TestExtractSummary_FallbackStripsUsageFooter(t *testing.T) {
 	}
 }
 
-func TestExtractSummary_FallbackExcludesStreamEvents(t *testing.T) {
+func TestExtractSummary_FallbackReadsOnlyLastResponseBlock(t *testing.T) {
 	log := "--- Attempt 2024-01-01T01:00:00 ---\n" +
-		"Implemented the feature.\n\n" +
-		StreamEventsHeader + "\n" +
-		`{"type":"system","subtype":"api_retry"}` + "\n"
+		"DEBUG: pwd = /repo\n" +
+		ResponseHeader + "\n" +
+		"First run answer.\n" +
+		"DEBUG: pwd = /repo\n" +
+		`{"type":"tool_progress","elapsed_time_seconds":30}` + "\n" +
+		"exec\n/bin/zsh -lc ls\n" +
+		ResponseHeader + "\n" +
+		"Implemented the feature.\n"
 	got := ExtractSummary(log)
 	if got != "Implemented the feature." {
-		t.Errorf("fallback should stop before stream events, got: %q", got)
+		t.Errorf("fallback should read only the last response block, got: %q", got)
+	}
+}
+
+func TestRunCLI_LogsStderrLiveThenStdoutAsResponse(t *testing.T) {
+	logFile := filepath.Join(t.TempDir(), "agent.log")
+	opts := RunOptions{LogFile: logFile, Workdir: t.TempDir()}
+	out, err := runCLI(context.Background(), "sh",
+		[]string{"-c", "echo transcript >&2; echo final answer; echo footer >&2"}, nil, opts)
+	if err != nil {
+		t.Fatalf("runCLI: %v", err)
+	}
+	for _, want := range []string{"transcript", "final answer", "footer"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("combined output missing %q: %q", want, out)
+		}
+	}
+	raw, _ := os.ReadFile(logFile)
+	if got := ExtractSummary(string(raw)); got != "final answer" {
+		t.Errorf("summary = %q, want only the stdout answer; log:\n%s", got, raw)
 	}
 }
 
