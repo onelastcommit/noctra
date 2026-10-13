@@ -166,7 +166,7 @@ The restart-safe cursor is stored in the SQLite DB at `~/.noctra/state.db` unles
 
 ## A Repository Was Transferred Or Renamed
 
-Symptom: `github: skipping repo` or `lessons: failed to get PR details` with `not_installed`, naming the old `owner/name`. Noctra cannot follow the move by itself, because the token service won't mint a token for the old name, and for a private repository GitHub only returns the redirect to a caller that already has access. With Noctra stopped (`noctra stop`):
+Symptom: a daily 🔑 *Repositories* alert, or `github: skipping repo` / `lessons: failed to get PR details` with `not_installed`, naming the old `owner/name`. Noctra cannot follow the move by itself, because the token service won't mint a token for the old name, and for a private repository GitHub only returns the redirect to a caller that already has access. With Noctra stopped (`noctra stop`):
 
 1. Point the Linear project's `Repo:` line at the new name.
 2. Delete the old clone (find it with `noctra repos list`). It holds nothing that isn't on GitHub, and Noctra re-clones from the directive when a ticket needs it.

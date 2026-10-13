@@ -2,6 +2,7 @@ package github
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -45,5 +46,15 @@ func TestWarnRepoUnavailable_OtherErrorsAlwaysWarn(t *testing.T) {
 	}
 	if strings.Contains(buf.String(), "hint=") {
 		t.Fatalf("the moved-repository hint belongs to not-installed failures only:\n%s", buf.String())
+	}
+}
+
+func TestRepoFullName_SurfacesAFailedMint(t *testing.T) {
+	SetTokenSource(func(context.Context, string) (string, error) {
+		return "", fmt.Errorf("GitHub App token for old/repo: %w", ErrAppNotInstalled)
+	})
+	defer SetTokenSource(nil)
+	if _, err := RepoFullName(context.Background(), "old/repo"); !errors.Is(err, ErrAppNotInstalled) {
+		t.Fatalf("a failed mint must surface as ErrAppNotInstalled, got %v", err)
 	}
 }

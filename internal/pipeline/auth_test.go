@@ -62,14 +62,14 @@ func TestAuthReportMessage(t *testing.T) {
 		Failing:   []authcheck.Result{{Name: "Claude Code", Detail: "not logged in", Fix: "run `claude auth login` on the host"}},
 		Recovered: []authcheck.Result{{Name: "Linear", OK: true}},
 	})
-	for _, want := range []string{"Authentication failed", "Claude Code", "not logged in", "claude auth login", "Authentication restored", "Linear"} {
+	for _, want := range []string{"Access check failed", "Claude Code", "not logged in", "claude auth login", "Access restored", "Linear"} {
 		if !strings.Contains(msg, want) {
 			t.Errorf("message %q is missing %q", msg, want)
 		}
 	}
 
 	reminder := authReportMessage(authcheck.Report{Reminders: []authcheck.Result{{Name: "GitHub CLI", Detail: "token expired"}}})
-	if !strings.Contains(reminder, "Still not authenticated") {
+	if !strings.Contains(reminder, "Still failing") {
 		t.Errorf("reminder should say it is still failing, got %q", reminder)
 	}
 }

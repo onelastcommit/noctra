@@ -1,7 +1,9 @@
 package github
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
@@ -23,4 +25,24 @@ func WarnRepoUnavailable(logger *slog.Logger, msg, ownerRepo string, err error) 
 		return
 	}
 	logger.Warn(msg, "repo", ownerRepo, "err", err, "hint", movedRepoHint)
+}
+
+var ErrRepoNotFound = errors.New("repository not found")
+
+func RepoFullName(ctx context.Context, ownerRepo string) (string, error) {
+	cmd, err := Command(ctx, ownerRepo, "api", "repos/"+ownerRepo, "--jq", ".full_name")
+	if err != nil {
+		return "", err
+	}
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	if err != nil {
+		msg := strings.TrimSpace(stderr.String())
+		if strings.Contains(msg, "HTTP 404") {
+			return "", fmt.Errorf("%w: %s", ErrRepoNotFound, msg)
+		}
+		return "", fmt.Errorf("gh api repos/%s: %w: %s", ownerRepo, err, msg)
+	}
+	return strings.TrimSpace(string(out)), nil
 }
