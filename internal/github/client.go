@@ -61,7 +61,7 @@ func (c *Client) ListNoctraPRs(ctx context.Context, repoURLs []string) ([]PR, er
 			"--json", "url,number,title,headRefName,body",
 		)
 		if err != nil {
-			slog.Warn("github: skipping repo", "repo", ownerRepo, "err", err)
+			WarnRepoUnavailable(slog.Default(), "github: skipping repo", ownerRepo, err)
 			continue
 		}
 		cmd.Stderr = &stderr

@@ -26,6 +26,7 @@ func (p *Pipeline) authChecks() []authcheck.Check {
 	} else {
 		checks = append(checks, authcheck.GitHubCLI(authcheck.DefaultExec))
 	}
+	checks = append(checks, authcheck.Repositories(github.RepoFullName, p.knownOwnerRepos))
 	checks = append(checks, authcheck.AgentCLI(p.agent.Name(), p.agent.Label(), authcheck.DefaultExec, os.Getenv))
 	if p.linear != nil && p.linearConfigured() {
 		checks = append(checks, authcheck.Linear(p.linear.Ping))
@@ -40,6 +41,9 @@ func (p *Pipeline) linearConfigured() bool {
 func (p *Pipeline) knownOwnerRepos(ctx context.Context) []string {
 	var repos []string
 	for _, remote := range p.resolver.AllRepoRemotes(ctx) {
+		if !github.IsGitHubRemote(remote) {
+			continue
+		}
 		if ownerRepo, err := github.ExtractOwnerRepo(remote); err == nil {
 			repos = append(repos, ownerRepo)
 		}
@@ -110,8 +114,8 @@ func authReportMessage(rep authcheck.Report) string {
 			}
 		}
 	}
-	writeFailures("🔑 *Authentication failed* — runs that need it will fail until this is fixed", rep.Failing)
-	writeFailures("🔑 *Still not authenticated*", rep.Reminders)
+	writeFailures("🔑 *Access check failed* — runs that need it will fail until this is fixed", rep.Failing)
+	writeFailures("🔑 *Still failing*", rep.Reminders)
 	if len(rep.Recovered) > 0 {
 		if b.Len() > 0 {
 			b.WriteString("\n\n")
@@ -120,7 +124,7 @@ func authReportMessage(rep authcheck.Report) string {
 		for _, r := range rep.Recovered {
 			names = append(names, notify.EscapeMarkdown(r.Name))
 		}
-		b.WriteString("✅ *Authentication restored* — " + strings.Join(names, ", "))
+		b.WriteString("✅ *Access restored* — " + strings.Join(names, ", "))
 	}
 	return b.String()
 }

@@ -28,3 +28,5 @@ type Report struct {
 func (r Report) Empty() bool {
 	return len(r.Failing) == 0 && len(r.Reminders) == 0 && len(r.Recovered) == 0
 }
+
+type RepoLookup func(ctx context.Context, ownerRepo string) (string, error)

@@ -45,9 +45,13 @@ func GitHubCLI(run Exec) Check {
 func GitHubApp(mint TokenMinter, health func(ctx context.Context) error, repos func(ctx context.Context) []string) Check {
 	return Check{Name: "GitHub App", Run: func(ctx context.Context) Result {
 		fix := "run `noctra github login --force` on the host"
-		if list := repos(ctx); len(list) > 0 {
-			if err := mint(ctx, list[0]); err != nil {
-				return Result{Detail: "could not mint a token for " + list[0] + ": " + err.Error(), Fix: fix}
+		for _, ownerRepo := range repos(ctx) {
+			err := mint(ctx, ownerRepo)
+			if ghauth.IsServiceError(err, "not_installed") {
+				continue
+			}
+			if err != nil {
+				return Result{Detail: "could not mint a token for " + ownerRepo + ": " + err.Error(), Fix: fix}
 			}
 			return Result{OK: true}
 		}

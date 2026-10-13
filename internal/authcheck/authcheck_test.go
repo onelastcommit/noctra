@@ -3,8 +3,12 @@ package authcheck
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/onelastcommit/noctra/internal/ghauth"
+	"github.com/onelastcommit/noctra/internal/github"
 )
 
 type fakeExec map[string]struct {
@@ -152,5 +156,75 @@ func TestTracker_IgnoresSkipped(t *testing.T) {
 	tr := NewTracker()
 	if rep := tr.Observe([]Result{{Name: "Antigravity", Skipped: true}}); !rep.Empty() {
 		t.Fatalf("skipped checks should never alert, got %+v", rep)
+	}
+}
+
+func TestGitHubApp_SkipsReposWithoutTheApp(t *testing.T) {
+	repos := func(context.Context) []string { return []string{"old/moved", "o/r"} }
+	healthy := func(context.Context) error { return nil }
+	notInstalled := &ghauth.ServiceError{Status: 404, Code: "not_installed"}
+	mint := func(_ context.Context, ownerRepo string) error {
+		if ownerRepo == "old/moved" {
+			return notInstalled
+		}
+		return nil
+	}
+	if r := runOne(GitHubApp(mint, healthy, repos)); !r.OK {
+		t.Fatalf("a moved repository is the Repositories check's job, not a broken link, got %+v", r)
+	}
+
+	allMissing := func(context.Context, string) error { return notInstalled }
+	if r := runOne(GitHubApp(allMissing, healthy, repos)); !r.OK {
+		t.Fatalf("with no installed repository only service health is checked, got %+v", r)
+	}
+}
+
+func TestRepositories(t *testing.T) {
+	repos := func(context.Context) []string {
+		return []string{"o/fine", "Old/Moved", "o/gone", "o/noapp", "o/Case"}
+	}
+	lookup := func(_ context.Context, ownerRepo string) (string, error) {
+		switch ownerRepo {
+		case "Old/Moved":
+			return "new/moved", nil
+		case "o/gone":
+			return "", fmt.Errorf("%w: gh: Not Found (HTTP 404)", github.ErrRepoNotFound)
+		case "o/noapp":
+			return "", fmt.Errorf("GitHub App token for o/noapp: %w", github.ErrAppNotInstalled)
+		case "o/Case":
+			return "o/case", nil
+		}
+		return ownerRepo, nil
+	}
+
+	r := runOne(Repositories(lookup, repos))
+	if r.OK || r.Fix == "" {
+		t.Fatalf("want a failure with a fix, got %+v", r)
+	}
+	for _, want := range []string{"3 of 5", "Old/Moved moved to new/moved", "o/gone: not found", "o/noapp: noctra-agent is not installed"} {
+		if !strings.Contains(r.Detail, want) {
+			t.Errorf("detail missing %q: %s", want, r.Detail)
+		}
+	}
+	if strings.Contains(r.Detail, "o/fine") || strings.Contains(r.Detail, "o/Case") {
+		t.Errorf("healthy repositories (case-insensitively) must not be listed: %s", r.Detail)
+	}
+
+	healthy := func(_ context.Context, ownerRepo string) (string, error) { return ownerRepo, nil }
+	if r := runOne(Repositories(healthy, repos)); !r.OK {
+		t.Fatalf("want OK, got %+v", r)
+	}
+}
+
+func TestRepositories_CancelledRunIsSkippedNotFailed(t *testing.T) {
+	repos := func(context.Context) []string { return []string{"o/r"} }
+	lookup := func(ctx context.Context, _ string) (string, error) {
+		<-ctx.Done()
+		return "", ctx.Err()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if r := Repositories(lookup, repos).Run(ctx); !r.Skipped {
+		t.Fatalf("a timed-out probe must not alert, got %+v", r)
 	}
 }
