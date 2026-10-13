@@ -52,13 +52,16 @@ func copilotEnv(ctx context.Context) []string {
 	return append(os.Environ(), "COPILOT_GITHUB_TOKEN="+token)
 }
 
+const copilotNoSuchTool = "noctra-no-tools"
+
 func copilotArgs(opts RunOptions) []string {
-	return []string{
-		"--allow-all-tools",
-		"--no-ask-user",
-		"--output-format", "json",
-		"-p", opts.Prompt,
+	args := []string{"--allow-all-tools"}
+	if opts.NoTools {
+		args = []string{"--available-tools=" + copilotNoSuchTool, "--disable-builtin-mcps"}
 	}
+	args = append(args, "--no-ask-user", "--output-format", "json")
+	args = append(args, modelArgs("--model", opts)...)
+	return append(args, "-p", opts.Prompt)
 }
 
 type copilotEvent struct {

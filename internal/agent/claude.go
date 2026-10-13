@@ -29,12 +29,16 @@ func (b claudeBackend) Run(ctx context.Context, opts RunOptions) (Usage, error) 
 }
 
 func claudeStreamArgs(opts RunOptions) []string {
-	args := []string{
-		"--dangerously-skip-permissions",
+	args := []string{"--dangerously-skip-permissions"}
+	if opts.NoTools {
+		args = []string{"--tools", "", "--strict-mcp-config"}
+	}
+	args = append(args,
 		"--print",
 		"--output-format", "stream-json",
 		"--verbose",
-	}
+	)
+	args = append(args, modelArgs("--model", opts)...)
 	args = append(args, claudePluginArgs(opts)...)
 	return append(args, "-p", opts.Prompt)
 }

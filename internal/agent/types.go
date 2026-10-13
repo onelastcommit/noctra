@@ -14,6 +14,8 @@ type RunOptions struct {
 	MaxTokens     int64
 	Env           []string
 	PluginDirs    []string
+	Model         string
+	NoTools       bool
 }
 
 type Backend interface {
@@ -83,4 +85,15 @@ type Usage struct {
 	TotalTokens  int64
 	CostUSD      float64
 	Model        string
+}
+
+type TriageInput struct {
+	PRNumber int
+	PRTitle  string
+	Feedback []FeedbackItem
+}
+
+type TriageVerdict struct {
+	Act    bool   `json:"act"`
+	Reason string `json:"reason"`
 }

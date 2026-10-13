@@ -120,6 +120,7 @@ func EnvDefaults() map[string]string {
 		"GEMINI_MODEL":          DefaultGeminiModel,
 		"MAX_REVIEW_RETRIES":    strconv.Itoa(DefaultMaxReviewRetries),
 		"AUTO_ITERATE_PRS":      "false",
+		"PR_TRIAGE":             "true",
 		"MAX_PR_ITERATIONS":     strconv.Itoa(DefaultMaxPRIterations),
 		"PR_POLL_INTERVAL":      strconv.Itoa(int(DefaultPRPollInterval / time.Second)),
 		"SWEEP_ENABLED":         "false",
@@ -202,6 +203,7 @@ type Config struct {
 	MaxReviewRetries int
 
 	AutoIteratePRs   bool
+	PRTriage         bool
 	MaxPRIterations  int
 	PRPollInterval   time.Duration
 	TrustedReviewers []string
@@ -331,6 +333,7 @@ func Load(scriptDir string) (*Config, error) {
 	cfg.AgentTimeout = time.Duration(timeoutMin) * time.Minute
 
 	cfg.AutoIteratePRs = getbool(fileEnv, "AUTO_ITERATE_PRS", false)
+	cfg.PRTriage = getbool(fileEnv, "PR_TRIAGE", true)
 	cfg.MaxPRIterations = getint(fileEnv, "MAX_PR_ITERATIONS", DefaultMaxPRIterations)
 	prPollSecs := getint(fileEnv, "PR_POLL_INTERVAL", int(DefaultPRPollInterval/time.Second))
 	cfg.PRPollInterval = time.Duration(prPollSecs) * time.Second

@@ -20,6 +20,13 @@ var ErrTimedOut = errors.New("agent timed out")
 
 var ErrTokenCapExceeded = errors.New("per-run token ceiling exceeded")
 
+func modelArgs(flag string, opts RunOptions) []string {
+	if opts.Model == "" {
+		return nil
+	}
+	return []string{flag, opts.Model}
+}
+
 func stageSkills(opts RunOptions) func() {
 	cleanup, err := plugins.Stage(opts.Workdir, opts.PluginDirs)
 	if err != nil {

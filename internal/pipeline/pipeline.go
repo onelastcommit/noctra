@@ -648,7 +648,9 @@ func englishLabel(variant string) string {
 
 func (p *Pipeline) runAgent(ctx context.Context, backend agent.Backend, opts agent.RunOptions) (agent.Usage, error) {
 	opts.Prompt += agent.LanguageSection(p.cfg.EnglishVariant)
-	opts.PluginDirs = p.pluginDirs()
+	if !opts.NoTools {
+		opts.PluginDirs = p.pluginDirs()
+	}
 	return backend.Run(ctx, opts)
 }
 
@@ -728,6 +730,10 @@ func (p *Pipeline) banner() {
 	if p.watcher != nil {
 		autoIterMode = fmt.Sprintf("On (cap %d, poll %s)",
 			p.cfg.MaxPRIterations, p.cfg.PRPollInterval)
+		if p.cfg.PRTriage {
+			autoIterMode = fmt.Sprintf("On (cap %d, poll %s, triage)",
+				p.cfg.MaxPRIterations, p.cfg.PRPollInterval)
+		}
 	}
 	autoReleaseMode := "Disabled"
 	if p.cfg.AutoReleaseLabel {
