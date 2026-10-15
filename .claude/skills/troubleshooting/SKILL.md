@@ -91,6 +91,8 @@ codex --version
 codex login
 ```
 
+A run that fails because the agent CLI isn't logged in doesn't use up a retry: Noctra comments 🔑, holds the ticket, and waits. Log in, then `/requeue <ticket>` (or Retry on the dashboard). Requeueing also resets a ticket's retry count, so a ticket that hit `MAX_RETRIES` can run again without restarting Noctra.
+
 Noctra inherits CLI auth from the host unless API keys are supplied. In containers, use API-key auth instead of interactive login:
 
 ```env

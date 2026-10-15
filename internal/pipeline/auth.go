@@ -15,6 +15,7 @@ import (
 	"github.com/onelastcommit/noctra/internal/ghauth"
 	"github.com/onelastcommit/noctra/internal/github"
 	"github.com/onelastcommit/noctra/internal/notify"
+	"github.com/onelastcommit/noctra/internal/source"
 	"github.com/onelastcommit/noctra/internal/sweep"
 )
 
@@ -149,4 +150,13 @@ func describeAgentFailure(b agent.Backend, output string, runErr error) agentFai
 		}
 	}
 	return agentFailure{detail: agent.FailureDetail(output, runErr)}
+}
+
+func (p *Pipeline) holdForLogin(ctx context.Context, issue source.Ticket, detail string) {
+	p.skipPermanently(issue.Identifier)
+	p.ticketBackToTrigger(ctx, issue, fmt.Sprintf(
+		"🔑 **Noctra: Agent login needed**\n\n```\n%s\n```\n\nThis didn't use up a retry. Log in on the host, then requeue the ticket (`/requeue %s` in Telegram, or Retry on the dashboard).",
+		detail, issue.Identifier))
+	p.notifier.Send(ctx, fmt.Sprintf("🔑 *%s* — %s\nLogin needed, no retry used. Requeue it after logging in.\n%s",
+		issue.Identifier, notify.EscapeMarkdown(issue.Title), notify.EscapeMarkdown(detail)))
 }
