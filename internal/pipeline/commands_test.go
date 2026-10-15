@@ -257,11 +257,19 @@ func TestHandleRequeue_StateMode(t *testing.T) {
 			LinearTeamKey: "ENG",
 			TriggerMode:   "state",
 		},
-		linear: client,
-		states: linear.StateIDs{Trigger: "state-trigger-id"},
+		linear:         client,
+		states:         linear.StateIDs{Trigger: "state-trigger-id"},
+		failedAttempts: map[string]int{"ENG-42": 3},
+		skipped:        map[string]struct{}{"ENG-42": {}},
 	}
 
 	reply := p.handleRequeue(context.Background(), "ENG-42 use Auth0 instead of Cognito")
+	if got := p.failedAttempts["ENG-42"]; got != 0 {
+		t.Errorf("expected requeue to reset attempts, got %d", got)
+	}
+	if _, ok := p.skipped["ENG-42"]; ok {
+		t.Error("expected requeue to clear the skip")
+	}
 	if !strings.Contains(reply, "requeued") {
 		t.Errorf("expected 'requeued' in reply, got %q", reply)
 	}

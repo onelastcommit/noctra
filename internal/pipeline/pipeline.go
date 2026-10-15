@@ -594,6 +594,18 @@ func (p *Pipeline) ClearSkipped(identifier string) error {
 	return nil
 }
 
+func (p *Pipeline) resetRetries(id string) {
+	p.mu.Lock()
+	_, attempted := p.failedAttempts[id]
+	_, skipped := p.skipped[id]
+	delete(p.failedAttempts, id)
+	delete(p.skipped, id)
+	p.mu.Unlock()
+	if attempted || skipped {
+		p.publishDashboardChange()
+	}
+}
+
 func (p *Pipeline) skipPermanently(id string) {
 	p.mu.Lock()
 	changed := false

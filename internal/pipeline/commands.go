@@ -334,6 +334,7 @@ func (p *Pipeline) RequeueTicket(ctx context.Context, identifier, extraContext, 
 	if err := p.triggerIssue(ctx, issue); err != nil {
 		return fmt.Errorf("commented on %s but failed to requeue it: %w", identifier, err)
 	}
+	p.resetRetries(issue.Identifier)
 	return nil
 }
 

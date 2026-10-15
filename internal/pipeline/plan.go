@@ -258,8 +258,13 @@ func (p *Pipeline) processPlanOnly(ctx context.Context, issue source.Ticket) {
 	}
 
 	if runErr != nil {
-		attempts := p.bumpFailed(id)
 		failure := describeAgentFailure(backend, output, runErr)
+		if failure.auth {
+			logger.Warn("plan-only agent not logged in; holding ticket", "err", runErr, "detail", failure.detail)
+			p.holdForLogin(ctx, issue, failure.detail)
+			return
+		}
+		attempts := p.bumpFailed(id)
 		logger.Warn("plan-only agent failed", "err", runErr, "detail", failure.detail, "auth", failure.auth, "attempt", attempts)
 		p.ticketBackToTrigger(ctx, issue, fmt.Sprintf(
 			"❌ **Noctra: Plan generation failed** (attempt %d/%d)\n\nThe agent exited with an error:\n\n```\n%s\n```\n\nWill retry on next poll cycle.\n\nTicket moved back to **%s**.",

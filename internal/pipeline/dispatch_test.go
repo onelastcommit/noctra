@@ -12,6 +12,7 @@ import (
 
 	"github.com/onelastcommit/noctra/internal/config"
 	"github.com/onelastcommit/noctra/internal/linear"
+	"github.com/onelastcommit/noctra/internal/notify"
 	"github.com/onelastcommit/noctra/internal/repo"
 	"github.com/onelastcommit/noctra/internal/source"
 )
@@ -76,6 +77,50 @@ func TestBumpFailed_BoundsRetries(t *testing.T) {
 	}
 	if p.failCount != 5 {
 		t.Fatalf("failCount: got %d, want 5", p.failCount)
+	}
+}
+
+func TestResetRetries_ClearsAttemptsAndSkip(t *testing.T) {
+	p := &Pipeline{
+		skipped:        map[string]struct{}{"ENG-300": {}},
+		failedAttempts: map[string]int{"ENG-300": 3, "ENG-301": 2},
+	}
+
+	p.resetRetries("ENG-300")
+
+	if _, ok := p.skipped["ENG-300"]; ok {
+		t.Fatal("ENG-300 should no longer be skipped")
+	}
+	if got := p.failedAttempts["ENG-300"]; got != 0 {
+		t.Fatalf("ENG-300 attempts: got %d, want 0", got)
+	}
+	if got := p.failedAttempts["ENG-301"]; got != 2 {
+		t.Fatalf("ENG-301 attempts: got %d, want 2 (other tickets untouched)", got)
+	}
+}
+
+func TestHoldForLogin_SkipsWithoutUsingARetry(t *testing.T) {
+	p := &Pipeline{
+		skipped:        map[string]struct{}{},
+		active:         map[string]struct{}{},
+		failedAttempts: map[string]int{},
+		sources:        []source.TicketSource{fetchSource{name: "linear"}},
+		notifier:       notify.NewMulti(nil, nil),
+	}
+	p.totalDispatches = 1
+
+	p.holdForLogin(context.Background(),
+		source.Ticket{Identifier: "ENG-302", Title: "Add a report", Source: "linear"},
+		"OpenAI Codex is not authenticated")
+
+	if _, ok := p.skipped["ENG-302"]; !ok {
+		t.Fatal("ENG-302 should be held in the skipped set until it is requeued")
+	}
+	if got := p.failedAttempts["ENG-302"]; got != 0 {
+		t.Fatalf("attempts: got %d, want 0 (a login failure must not use a retry)", got)
+	}
+	if p.totalDispatches != 0 {
+		t.Fatalf("totalDispatches: got %d, want 0 (dispatch should be refunded)", p.totalDispatches)
 	}
 }
 

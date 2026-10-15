@@ -238,8 +238,15 @@ func (p *Pipeline) process(ctx context.Context, issue source.Ticket) {
 	}
 
 	if runErr != nil {
-		attempts := p.bumpFailed(id)
 		failure := describeAgentFailure(backend, output, runErr)
+		if failure.auth {
+			logger.Warn("agent not logged in; holding ticket", "err", runErr, "detail", failure.detail)
+			p.holdForLogin(ctx, issue, failure.detail)
+			p.finishRun(run, "failed")
+			repo.CleanupWorktree(ctx, resolved.Path, p.cfg.WorktreeBase, id)
+			return
+		}
+		attempts := p.bumpFailed(id)
 		detail := failure.detail
 		logger.Warn("agent exited with error",
 			"err", runErr, "detail", detail, "auth", failure.auth, "attempt", attempts, "max", p.cfg.MaxRetries)
@@ -267,7 +274,7 @@ func (p *Pipeline) process(ctx context.Context, issue source.Ticket) {
 		attempts := p.bumpFailed(id)
 		logger.Info("blocked", "line", blocked, "attempt", attempts, "max", p.cfg.MaxRetries)
 		p.ticketBackToTrigger(ctx, issue, fmt.Sprintf(
-			"🚧 **Noctra needs your input** (attempt %d/%d)\n\nThe agent got blocked on this ticket:\n\n> %s\n\nClarify in the ticket comments, then move it back to **%s** to retry. After %d attempts it won't be re-dispatched until Noctra restarts.",
+			"🚧 **Noctra needs your input** (attempt %d/%d)\n\nThe agent got blocked on this ticket:\n\n> %s\n\nClarify in the ticket comments, then move it back to **%s** to retry. After %d attempts it won't be re-dispatched until it's requeued or Noctra restarts.",
 			attempts, p.cfg.MaxRetries, blocked, p.cfg.TriggerState, p.cfg.MaxRetries))
 		p.notifier.Send(ctx, fmt.Sprintf("⚠️ *%s* — Blocked\n%s", id, notify.EscapeMarkdown(blocked)))
 		p.finishRun(run, "blocked")
