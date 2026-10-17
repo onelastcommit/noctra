@@ -28,7 +28,7 @@ Improve test coverage for the project at %s by adding meaningful tests where the
 
 ## Rules:
 - Run the full test suite at most twice in this run; use targeted per-package runs while iterating.
-- If a test you add will not go green after 3 attempts, delete that test, keep whatever is already passing, and summarize.
+- If a test you add will not go green after 3 attempts, delete that test, keep whatever is already passing, and report what you kept.
 - Add tests only. Do NOT change production code except where a test reveals a genuine bug (and if so, keep the fix minimal and call it out).
 - Follow the project's existing test style, helpers, and table-driven patterns.
 - Prefer one well-covered area over many shallow tests sprinkled around.
@@ -36,7 +36,7 @@ Improve test coverage for the project at %s by adding meaningful tests where the
 - If you cannot run the test suite, say BLOCKED: Cannot run the test suite.
 
 ## When done:
-Summarize which area you covered and the coverage delta. Wrap the summary between these exact marker lines, each alone on its own line with nothing else:
+Describe which area you covered and the coverage delta. Wrap the summary between these exact marker lines, each alone on its own line with nothing else:
 
 ===NOCTRA SUMMARY===
 <your summary here>

@@ -28,7 +28,7 @@ Scan the project at %s for real bugs you have medium-to-high confidence in, and 
 - Concurrency: data races, a mutex locked but never unlocked on a path, goroutine leaks.
 
 ## Out of scope (do NOT touch):
-- Style, naming, formatting, comments, performance micro-optimizations.
+- Style, naming, formatting, comments, performance micro-tuning.
 - Anything that changes intended behaviour or public APIs.
 - Speculative "this could be better" changes, or low-confidence guesses about a possible bug.
 

@@ -32,7 +32,7 @@ Find and fix documentation in the project at %s that no longer matches the code.
 - If the docs accurately reflect the code, say BLOCKED: Documentation is in sync — no drift found.
 
 ## When done:
-Summarize the drift you corrected (what was stale -> what it should be). Wrap the summary between these exact marker lines, each alone on its own line with nothing else:
+Describe the drift you corrected (what was stale -> what it should be). Wrap the summary between these exact marker lines, each alone on its own line with nothing else:
 
 ===NOCTRA SUMMARY===
 <your summary here>
