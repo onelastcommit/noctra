@@ -25,7 +25,7 @@ Update outdated dependencies in the project at %s, conservatively.
 2. List outdated dependencies (e.g. go list -u -m all, npm outdated, pip list --outdated).
 3. Bump dependencies that have a newer compatible release. Prefer patch and minor bumps. Bump at most 5 dependencies in a single run — pick the most valuable ones and leave the rest for a future run.
 4. Apply all chosen bumps first, then run the build and the full test suite ONCE for the whole batch.
-5. If the batch fails, bisect at most twice to isolate the culprit. If it is still failing after that, revert to the last combination you verified green (or drop all bumps) and summarize what you could not land.
+5. If the batch fails, bisect at most twice to isolate the culprit. If it is still failing after that, revert to the last combination you verified green (or drop all bumps) and report what you could not land.
 
 ## Rules:
 - Run the full build/test suite at most 4 times in this run. Shipping 2 verified bumps beats spending the whole run chasing 10.

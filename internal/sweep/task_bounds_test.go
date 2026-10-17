@@ -20,8 +20,8 @@ func TestIterativeTasksBoundTheirVerifyLoop(t *testing.T) {
 		if !runCapRe.MatchString(prompt) {
 			t.Errorf("task %q runs the build/test suite in a loop but its prompt declares no cap", name)
 		}
-		if !strings.Contains(strings.ToLower(prompt), "summarize") {
-			t.Errorf("task %q has no instruction to stop and summarize when it cannot finish", name)
+		if !strings.Contains(strings.ToLower(prompt), "and report what") {
+			t.Errorf("task %q has no instruction to stop and report when it cannot finish", name)
 		}
 	}
 }

@@ -33,7 +33,7 @@ Scan the codebase at %s for unused code, imports, variables, functions, types, a
 
 ## Rules:
 - Remove at most 20 symbols in a single run. If there is more dead code than that, remove the clearest 20 and note the rest in your summary.
-- Run the full build/test suite at most 3 times. If it is still red on the third attempt, revert to the last state you verified green, keep only those removals, and summarize.
+- Run the full build/test suite at most 3 times. If it is still red on the third attempt, revert to the last state you verified green, keep only those removals, and report what you kept.
 - Only remove genuinely dead/unused code. Do not refactor, rename, or restructure.
 - Do not remove code that is used via reflection, build tags, or generated code patterns.
 - Do not remove TODO/FIXME comments — only actual dead code.
