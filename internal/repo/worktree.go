@@ -86,6 +86,19 @@ func RemoteBranchExists(ctx context.Context, repoPath, branch string) bool {
 	return runIn(ctx, repoPath, "git", "ls-remote", "--exit-code", "--heads", "origin", branch) == nil
 }
 
+func FetchPRHead(ctx context.Context, repoPath string, prNumber string) (string, error) {
+	defer lockRepo(repoPath)()
+
+	if err := runIn(ctx, repoPath, "git", "fetch", "origin", fmt.Sprintf("pull/%s/head", prNumber), "--quiet"); err != nil {
+		return "", err
+	}
+	out, err := exec.CommandContext(ctx, "git", "-C", repoPath, "rev-parse", "FETCH_HEAD").Output()
+	if err != nil {
+		return "", fmt.Errorf("git rev-parse FETCH_HEAD: %w", err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
 func CreateOrResumeWorktree(ctx context.Context, base, identifier, repoPath, mainBranch string) (wt Worktree, resumed bool, err error) {
 	if RemoteBranchExists(ctx, repoPath, BranchName(identifier)) {
 		wt, err = ResumeWorktree(ctx, base, identifier, repoPath)
