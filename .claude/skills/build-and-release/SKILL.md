@@ -70,7 +70,7 @@ On a host running Noctra as a `systemd --user` service, `make update` pulls `mai
 
 On an installed host (release binary, no checkout), operate the service through the CLI: `noctra update` (add `--restart` to restart afterwards), `noctra start` / `stop` / `restart` / `status` and `noctra logs`. Recommend these over raw `systemctl --user` commands, which they wrap.
 
-The startup banner (`pipeline.banner`) prints the resolved runtime config — repos, trigger, agent backend (`p.agent.Label()` + CLI), review gate, auto-iterate, notifications, GitHub identity — so a restart's `make logs` shows exactly what is live. Keep new operationally significant config visible there.
+The startup banner (`pipeline.banner`) prints the resolved runtime config — repos, trigger, agent backend (default `p.agent.Label()`, plus agent teams if on), review gate, auto-iterate, notifications, GitHub identity — so a restart's `make logs` shows exactly what is live. Keep new operationally significant config visible there.
 
 ## Docker Image
 
