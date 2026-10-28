@@ -56,11 +56,11 @@ func ExtractPlan(output string) (string, bool) {
 		return "", false
 	}
 	rest := output[start+len(PlanStartMarker):]
-	end := strings.Index(rest, PlanEndMarker)
-	if end < 0 {
+	before, _, ok := strings.Cut(rest, PlanEndMarker)
+	if !ok {
 		return "", false
 	}
-	plan := strings.TrimSpace(rest[:end])
+	plan := strings.TrimSpace(before)
 	if plan == "" {
 		return "", false
 	}

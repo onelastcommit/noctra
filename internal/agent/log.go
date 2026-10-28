@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -52,8 +53,8 @@ func FailureDetail(output string, runErr error) string {
 
 func lastMeaningfulLine(output string) string {
 	lines := strings.Split(output, "\n")
-	for i := len(lines) - 1; i >= 0; i-- {
-		s := strings.TrimSpace(lines[i])
+	for _, line := range slices.Backward(lines) {
+		s := strings.TrimSpace(line)
 		if s == "" || strings.HasPrefix(s, "DEBUG:") || strings.HasPrefix(s, "--- Attempt") {
 			continue
 		}
@@ -170,11 +171,11 @@ func between(s, startMarker, endMarker string) (string, bool) {
 		return "", false
 	}
 	rest := s[start+len(startMarker):]
-	end := strings.Index(rest, endMarker)
-	if end < 0 {
+	before, _, ok := strings.Cut(rest, endMarker)
+	if !ok {
 		return "", false
 	}
-	inner := strings.TrimSpace(rest[:end])
+	inner := strings.TrimSpace(before)
 	if inner == "" {
 		return "", false
 	}

@@ -368,11 +368,10 @@ func ExtractOwnerRepo(raw string) (string, error) {
 	s := strings.TrimSuffix(NormalizeRepoRef(raw), ".git")
 
 	if strings.HasPrefix(s, "git@") {
-		idx := strings.Index(s, ":")
-		if idx < 0 {
+		_, rest, ok := strings.Cut(s, ":")
+		if !ok {
 			return "", fmt.Errorf("ssh URL missing ':' in %q", raw)
 		}
-		rest := s[idx+1:]
 		if !looksLikeOwnerRepo(rest) {
 			return "", fmt.Errorf("unexpected ssh URL shape: %q", raw)
 		}

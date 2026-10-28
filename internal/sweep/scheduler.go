@@ -264,12 +264,12 @@ func (s *Scheduler) RecordRun(repoSlug, taskName string) error {
 }
 
 func (s *Scheduler) Summary() string {
-	var out string
+	var out strings.Builder
 	for _, t := range s.tasks {
-		out += fmt.Sprintf("  - %s (cooldown: %s)\n", t.Name, t.Cooldown)
+		fmt.Fprintf(&out, "  - %s (cooldown: %s)\n", t.Name, t.Cooldown)
 	}
-	if out == "" {
+	if out.Len() == 0 {
 		return "  (no tasks registered)"
 	}
-	return out
+	return out.String()
 }

@@ -48,9 +48,9 @@ func parseCronField(field string, min, max int) (uint64, error) {
 	for _, part := range strings.Split(field, ",") {
 		step := 1
 		rng := part
-		if i := strings.IndexByte(part, '/'); i >= 0 {
-			rng = part[:i]
-			n, err := strconv.Atoi(part[i+1:])
+		if before, after, ok := strings.Cut(part, "/"); ok {
+			rng = before
+			n, err := strconv.Atoi(after)
 			if err != nil || n < 1 {
 				return 0, fmt.Errorf("cron: invalid step in %q", part)
 			}

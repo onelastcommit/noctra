@@ -30,13 +30,13 @@ func LoadEnvFile(path string) (map[string]string, error) {
 			continue
 		}
 
-		eq := strings.IndexByte(line, '=')
-		if eq < 0 {
+		before, after, ok := strings.Cut(line, "=")
+		if !ok {
 			return nil, fmt.Errorf("%s:%d: missing '=' in %q", path, lineNum, line)
 		}
 
-		key := strings.TrimSpace(line[:eq])
-		val := unquote(strings.TrimSpace(line[eq+1:]))
+		key := strings.TrimSpace(before)
+		val := unquote(strings.TrimSpace(after))
 		out[key] = val
 	}
 	if err := sc.Err(); err != nil {
