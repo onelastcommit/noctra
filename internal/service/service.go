@@ -129,7 +129,7 @@ func installedBinaryPath() string {
 		return ""
 	}
 	for _, line := range strings.Split(string(content), "\n") {
-		if v := strings.TrimPrefix(strings.TrimSpace(line), "ExecStart="); v != strings.TrimSpace(line) {
+		if v, ok := strings.CutPrefix(strings.TrimSpace(line), "ExecStart="); ok {
 			if fields := strings.Fields(v); len(fields) > 0 {
 				return fields[0]
 			}

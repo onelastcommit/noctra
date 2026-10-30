@@ -244,8 +244,8 @@ const BackendLabelPrefix = "agent:"
 func (i Issue) BackendLabel() string {
 	for _, l := range i.Labels.Nodes {
 		name := strings.ToLower(strings.TrimSpace(l.Name))
-		if strings.HasPrefix(name, BackendLabelPrefix) {
-			if v := strings.TrimSpace(strings.TrimPrefix(name, BackendLabelPrefix)); v != "" {
+		if after, ok := strings.CutPrefix(name, BackendLabelPrefix); ok {
+			if v := strings.TrimSpace(after); v != "" {
 				return v
 			}
 		}

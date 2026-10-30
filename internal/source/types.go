@@ -138,8 +138,8 @@ const BackendLabelPrefix = "agent:"
 func (t Ticket) BackendLabel() string {
 	for _, l := range t.Labels {
 		name := strings.ToLower(strings.TrimSpace(l.Name))
-		if strings.HasPrefix(name, BackendLabelPrefix) {
-			if v := strings.TrimSpace(strings.TrimPrefix(name, BackendLabelPrefix)); v != "" {
+		if after, ok := strings.CutPrefix(name, BackendLabelPrefix); ok {
+			if v := strings.TrimSpace(after); v != "" {
 				return v
 			}
 		}

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"slices"
 	"sync"
 	"time"
 
@@ -137,8 +138,8 @@ func (p *Pipeline) checkPlanApproval(ctx context.Context, ps state.PlanState) (b
 	}
 
 	hasApprovalAfterPlan := false
-	for i := len(comments) - 1; i >= 0; i-- {
-		body := comments[i].Body
+	for _, comment := range slices.Backward(comments) {
+		body := comment.Body
 		if source.IsSystemComment(body) && isPlanComment(body) {
 			return hasApprovalAfterPlan, nil
 		}
