@@ -22,12 +22,12 @@
     },
     "impeccable": {
       "repo": "pbakaus/impeccable",
-      "commit": "919dbeba520df760a157fe635be62faae88d58da",
+      "commit": "6743a347db6229848348024388033e830ae4af42",
       "licence": "Apache-2.0"
     },
     "marketingskills": {
       "repo": "coreyhaines31/marketingskills",
-      "commit": "dda3841f0b294e01e93b1541486beefbfab0915e",
+      "commit": "e85f3cbc2e4a79bf33b2a12e9bdd9087d414735b",
       "licence": "MIT"
     },
     "mattpocock-skills": {
@@ -37,7 +37,7 @@
     },
     "ponytail": {
       "repo": "DietrichGebert/ponytail",
-      "commit": "9b58c1ffb790c075ca32e70a89cf1d80588f4abf",
+      "commit": "09c434ab73ca43761c5d8b0c5d341926c2fba710",
       "licence": "MIT"
     },
     "superpowers": {
