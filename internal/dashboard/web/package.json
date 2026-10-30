@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "preact": "^10.25.4"
+    "preact": "^10.29.8"
   },
   "devDependencies": {
     "esbuild": "^0.25.0",
