@@ -2,7 +2,7 @@
   "plugins": {
     "agent-skills": {
       "repo": "addyosmani/agent-skills",
-      "commit": "1401c8b8030e023baeebb31781a6653fe8e93026",
+      "commit": "301b02b12bff98e4688e6984af6556802322bbde",
       "licence": "MIT"
     },
     "anthropic-skills": {
@@ -27,12 +27,12 @@
     },
     "marketingskills": {
       "repo": "coreyhaines31/marketingskills",
-      "commit": "e85f3cbc2e4a79bf33b2a12e9bdd9087d414735b",
+      "commit": "96798cf38736ecdba015a1d2b0521b0c8f8f41dd",
       "licence": "MIT"
     },
     "mattpocock-skills": {
       "repo": "mattpocock/skills",
-      "commit": "d81f3a183412e71a5b1e84ca21bc1a35eea03a60",
+      "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
       "licence": "MIT"
     },
     "ponytail": {
