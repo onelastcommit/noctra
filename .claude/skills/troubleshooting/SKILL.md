@@ -109,7 +109,7 @@ AGENT_BACKEND=claude
 USE_AGENT_TEAMS=true
 ```
 
-The value must be `true` (or `1`/`yes`, any case). Check the ticket log for the backend run header and use a recent `claude` CLI.
+The value must be a true boolean (`true`, `1`, `yes` or `y`, any case). Check the ticket log for the backend run header and use a recent `claude` CLI.
 
 ## Gemini Review Fails Or Seems Wrong
 
@@ -117,7 +117,7 @@ If every review errors or fails before useful comments appear:
 
 1. Confirm `GEMINI_API_KEY` is set only when the review gate is desired.
 2. Validate the key with a direct API call.
-3. Check Noctra's service log (`noctra logs`) for the `gemini review` lines; there is no separate Gemini log file.
+3. Check Noctra's service log (`noctra logs`) for the `gemini review` lines. When the review passes, its raw response is also appended to the ticket log (`logs/ENG-42.log`) as a `--- Gemini review` block.
 4. If the diff is huge, split the ticket or reduce scope.
 
 ```bash
