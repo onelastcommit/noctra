@@ -31,7 +31,7 @@ A container has no interactive login, so authenticate with keys in `.env`:
 | Env var | For |
 |---------|-----|
 | `LINEAR_API_KEY` | Linear (required) |
-| `AGENT_BACKEND` | `claude`, `codex`, `copilot` or `antigravity` |
+| `AGENT_BACKEND` | `claude`, `codex` or `copilot` |
 | `ANTHROPIC_API_KEY` *or* `OPENAI_API_KEY` | The agent backend you chose (Copilot uses `GH_TOKEN`) |
 | `GH_TOKEN` | `gh` and `git push` (a token with repo + PR scope); also authenticates Copilot |
 | `GIT_USER_NAME` / `GIT_USER_EMAIL` | Commit identity (defaults to a `Noctra` bot) |
