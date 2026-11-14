@@ -56,6 +56,9 @@ func (p *Pipeline) process(ctx context.Context, issue source.Ticket) {
 		return
 	}
 
+	p.claimInProgress(ctx, issue)
+	defer p.releaseInProgress(ctx, issue)
+
 	if p.cfg.VerboseNotifications {
 		p.notifier.Send(ctx, fmt.Sprintf("🎯 *%s* — %s\nNoctra picked it up — working on it.",
 			id, notify.EscapeMarkdown(issue.Title)))
@@ -581,6 +584,7 @@ func (p *Pipeline) process(ctx context.Context, issue source.Ticket) {
 		}
 	}
 
+	p.settleInProgress(id)
 	if err := p.ticketSource(issue).MarkReady(ctx, issue, source.ReadyInfo{
 		PRURL:        prURL,
 		BackendLabel: backend.Label(),
@@ -594,6 +598,7 @@ func (p *Pipeline) process(ctx context.Context, issue source.Ticket) {
 }
 
 func (p *Pipeline) ticketBackToTrigger(ctx context.Context, ticket source.Ticket, body string) {
+	p.releaseInProgress(ctx, ticket)
 	if err := p.ticketSource(ticket).BackToTrigger(ctx, ticket, body); err != nil {
 		slog.Warn("ticket source back-to-trigger failed", "issue_id", ticket.ID, "source", ticket.Source, "err", err)
 	}
@@ -610,6 +615,7 @@ func (p *Pipeline) resolveNoChanges(ctx context.Context, ticket source.Ticket, b
 	src := p.ticketSource(ticket)
 	if ar, ok := src.(source.Archiver); ok {
 		if err := ar.Archive(ctx, ticket); err == nil {
+			p.settleInProgress(ticket.Identifier)
 			return
 		} else {
 			slog.Warn("archive failed; falling back to mark-done", "issue_id", ticket.ID, "err", err)
@@ -617,6 +623,7 @@ func (p *Pipeline) resolveNoChanges(ctx context.Context, ticket source.Ticket, b
 	}
 	if dm, ok := src.(source.DoneMarker); ok {
 		if err := dm.MarkDone(ctx, ticket); err == nil {
+			p.settleInProgress(ticket.Identifier)
 			return
 		} else {
 			slog.Warn("mark-done failed; skipping ticket instead", "issue_id", ticket.ID, "err", err)

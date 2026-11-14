@@ -63,6 +63,7 @@ const (
 	DefaultAgentBackend     = "claude"
 	DefaultTriggerMode      = "state"
 	DefaultTriggerState     = "Next"
+	DefaultInProgressState  = "In Progress"
 	DefaultInReviewState    = "In Review"
 	DefaultDoneState        = "Done"
 	DefaultMainBranch       = "main"
@@ -93,7 +94,10 @@ const (
 	DefaultSweepTimeout   = 20 * time.Minute
 	DefaultSweepMaxTokens = 2_000_000
 
-	DefaultJiraInReviewStatus = "In Review"
+	DefaultJiraInProgressStatus = "In Progress"
+	DefaultJiraInReviewStatus   = "In Review"
+
+	DefaultGitHubInProgressLabel = "in progress"
 
 	DefaultPlanConfirmLabel = "plan-first"
 
@@ -102,62 +106,67 @@ const (
 
 func EnvDefaults() map[string]string {
 	return map[string]string{
-		"LINEAR_TEAM_KEY":       DefaultLinearTeamKey,
-		"AGENT_BACKEND":         DefaultAgentBackend,
-		"TRIGGER_MODE":          DefaultTriggerMode,
-		"TRIGGER_STATE":         DefaultTriggerState,
-		"IN_REVIEW_STATE":       DefaultInReviewState,
-		"MAIN_BRANCH":           DefaultMainBranch,
-		"MAX_CONCURRENT":        strconv.Itoa(DefaultMaxConcurrent),
-		"POLL_INTERVAL":         strconv.Itoa(int(DefaultPollInterval / time.Second)),
-		"USE_AGENT_TEAMS":       "false",
-		"MAX_DISPATCHES":        strconv.Itoa(DefaultMaxDispatches),
-		"MAX_RETRIES":           strconv.Itoa(DefaultMaxRetries),
-		"AGENT_TIMEOUT_MINUTES": strconv.Itoa(int(DefaultAgentTimeout / time.Minute)),
-		"TELEGRAM_ENABLED":      "false",
-		"VERBOSE_NOTIFICATIONS": "false",
-		"GEMINI_MODE":           DefaultGeminiMode,
-		"GEMINI_MODEL":          DefaultGeminiModel,
-		"MAX_REVIEW_RETRIES":    strconv.Itoa(DefaultMaxReviewRetries),
-		"AUTO_ITERATE_PRS":      "false",
-		"PR_TRIAGE":             "true",
-		"MAX_PR_ITERATIONS":     strconv.Itoa(DefaultMaxPRIterations),
-		"PR_POLL_INTERVAL":      strconv.Itoa(int(DefaultPRPollInterval / time.Second)),
-		"SWEEP_ENABLED":         "false",
-		"SWEEP_INTERVAL":        strconv.Itoa(int(DefaultSweepInterval / time.Second)),
-		"SWEEP_MAX_TASKS":       strconv.Itoa(DefaultSweepMaxTasks),
-		"SWEEP_TIMEOUT_MINUTES": strconv.Itoa(int(DefaultSweepTimeout / time.Minute)),
-		"TICKET_SOURCES":        DefaultTicketSources,
-		"DONE_STATE":            DefaultDoneState,
-		"JIRA_IN_REVIEW_STATUS": DefaultJiraInReviewStatus,
-		"ENGLISH_VARIANT":       DefaultEnglishVariant,
-		"AUTO_RELEASE_LABEL":    "false",
-		"DEFAULT_RELEASE_BUMP":  DefaultReleaseBump,
-		"MAX_DAILY_TOKENS":      "0",
-		"MAX_DAILY_USD":         "0",
-		"AGENT_MAX_TOKENS":      "0",
-		"RATE_LIMIT_STRATEGY":   DefaultRateLimitStrategy,
-		"RATE_LIMIT_COOLDOWN":   strconv.Itoa(int(DefaultRateLimitCooldown / time.Second)),
-		"AUTH_CHECK_SCHEDULE":   DefaultAuthCheckSchedule,
-		"PLAN_CONFIRM":          "false",
-		"PLAN_CONFIRM_LABEL":    DefaultPlanConfirmLabel,
-		"GITHUB_AUTH_MODE":      "auto",
-		"NOCTRA_AUTH_URL":       DefaultAuthServiceURL,
+		"LINEAR_TEAM_KEY":          DefaultLinearTeamKey,
+		"AGENT_BACKEND":            DefaultAgentBackend,
+		"TRIGGER_MODE":             DefaultTriggerMode,
+		"TRIGGER_STATE":            DefaultTriggerState,
+		"IN_PROGRESS_STATE":        DefaultInProgressState,
+		"IN_REVIEW_STATE":          DefaultInReviewState,
+		"MAIN_BRANCH":              DefaultMainBranch,
+		"MAX_CONCURRENT":           strconv.Itoa(DefaultMaxConcurrent),
+		"POLL_INTERVAL":            strconv.Itoa(int(DefaultPollInterval / time.Second)),
+		"USE_AGENT_TEAMS":          "false",
+		"MAX_DISPATCHES":           strconv.Itoa(DefaultMaxDispatches),
+		"MAX_RETRIES":              strconv.Itoa(DefaultMaxRetries),
+		"AGENT_TIMEOUT_MINUTES":    strconv.Itoa(int(DefaultAgentTimeout / time.Minute)),
+		"TELEGRAM_ENABLED":         "false",
+		"VERBOSE_NOTIFICATIONS":    "false",
+		"GEMINI_MODE":              DefaultGeminiMode,
+		"GEMINI_MODEL":             DefaultGeminiModel,
+		"MAX_REVIEW_RETRIES":       strconv.Itoa(DefaultMaxReviewRetries),
+		"AUTO_ITERATE_PRS":         "false",
+		"PR_TRIAGE":                "true",
+		"MAX_PR_ITERATIONS":        strconv.Itoa(DefaultMaxPRIterations),
+		"PR_POLL_INTERVAL":         strconv.Itoa(int(DefaultPRPollInterval / time.Second)),
+		"SWEEP_ENABLED":            "false",
+		"SWEEP_INTERVAL":           strconv.Itoa(int(DefaultSweepInterval / time.Second)),
+		"SWEEP_MAX_TASKS":          strconv.Itoa(DefaultSweepMaxTasks),
+		"SWEEP_TIMEOUT_MINUTES":    strconv.Itoa(int(DefaultSweepTimeout / time.Minute)),
+		"TICKET_SOURCES":           DefaultTicketSources,
+		"DONE_STATE":               DefaultDoneState,
+		"JIRA_IN_PROGRESS_STATUS":  DefaultJiraInProgressStatus,
+		"JIRA_IN_REVIEW_STATUS":    DefaultJiraInReviewStatus,
+		"GITHUB_IN_PROGRESS_LABEL": DefaultGitHubInProgressLabel,
+		"ENGLISH_VARIANT":          DefaultEnglishVariant,
+		"AUTO_RELEASE_LABEL":       "false",
+		"DEFAULT_RELEASE_BUMP":     DefaultReleaseBump,
+		"MAX_DAILY_TOKENS":         "0",
+		"MAX_DAILY_USD":            "0",
+		"AGENT_MAX_TOKENS":         "0",
+		"RATE_LIMIT_STRATEGY":      DefaultRateLimitStrategy,
+		"RATE_LIMIT_COOLDOWN":      strconv.Itoa(int(DefaultRateLimitCooldown / time.Second)),
+		"AUTH_CHECK_SCHEDULE":      DefaultAuthCheckSchedule,
+		"PLAN_CONFIRM":             "false",
+		"PLAN_CONFIRM_LABEL":       DefaultPlanConfirmLabel,
+		"GITHUB_AUTH_MODE":         "auto",
+		"NOCTRA_AUTH_URL":          DefaultAuthServiceURL,
 	}
 }
 
 type Config struct {
-	TicketSources      []string
-	GitHubIssuesRepos  []string
-	GitHubTriggerLabel string
+	TicketSources         []string
+	GitHubIssuesRepos     []string
+	GitHubTriggerLabel    string
+	GitHubInProgressLabel string
 
-	JiraBaseURL        string
-	JiraUserEmail      string
-	JiraAPIToken       string
-	JiraProject        string
-	JiraTriggerStatus  string
-	JiraTriggerLabel   string
-	JiraInReviewStatus string
+	JiraBaseURL          string
+	JiraUserEmail        string
+	JiraAPIToken         string
+	JiraProject          string
+	JiraTriggerStatus    string
+	JiraTriggerLabel     string
+	JiraInReviewStatus   string
+	JiraInProgressStatus string
 
 	LinearAPIKey            string
 	LinearOAuthToken        string
@@ -169,6 +178,7 @@ type Config struct {
 	TriggerMode             string
 	TriggerState            string
 	TriggerLabel            string
+	InProgressState         string
 	InReviewState           string
 	DoneState               string
 
@@ -274,6 +284,7 @@ func Load(scriptDir string) (*Config, error) {
 		TriggerMode:             strings.ToLower(getenv(fileEnv, "TRIGGER_MODE", DefaultTriggerMode)),
 		TriggerState:            getenv(fileEnv, "TRIGGER_STATE", DefaultTriggerState),
 		TriggerLabel:            getenv(fileEnv, "TRIGGER_LABEL", ""),
+		InProgressState:         getenv(fileEnv, "IN_PROGRESS_STATE", DefaultInProgressState),
 		InReviewState:           getenv(fileEnv, "IN_REVIEW_STATE", DefaultInReviewState),
 		DoneState:               getenv(fileEnv, "DONE_STATE", DefaultDoneState),
 		GitHubTriggerLabel:      getenv(fileEnv, "GITHUB_TRIGGER_LABEL", ""),
@@ -317,6 +328,7 @@ func Load(scriptDir string) (*Config, error) {
 	if cfg.GitHubTriggerLabel == "" {
 		cfg.GitHubTriggerLabel = cfg.TriggerLabel
 	}
+	cfg.GitHubInProgressLabel = getenv(fileEnv, "GITHUB_IN_PROGRESS_LABEL", DefaultGitHubInProgressLabel)
 
 	cfg.JiraBaseURL = getenv(fileEnv, "JIRA_BASE_URL", "")
 	cfg.JiraUserEmail = getenv(fileEnv, "JIRA_USER_EMAIL", "")
@@ -325,6 +337,7 @@ func Load(scriptDir string) (*Config, error) {
 	cfg.JiraTriggerStatus = getenv(fileEnv, "JIRA_TRIGGER_STATUS", "")
 	cfg.JiraTriggerLabel = getenv(fileEnv, "JIRA_TRIGGER_LABEL", "")
 	cfg.JiraInReviewStatus = getenv(fileEnv, "JIRA_IN_REVIEW_STATUS", DefaultJiraInReviewStatus)
+	cfg.JiraInProgressStatus = getenv(fileEnv, "JIRA_IN_PROGRESS_STATUS", DefaultJiraInProgressStatus)
 
 	pollSecs := getint(fileEnv, "POLL_INTERVAL", int(DefaultPollInterval/time.Second))
 	cfg.PollInterval = time.Duration(pollSecs) * time.Second

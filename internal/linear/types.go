@@ -269,9 +269,11 @@ type TokenManagerConfig struct {
 }
 
 type StateIDs struct {
-	Trigger  string
-	InReview string
-	Done     string
+	Trigger    string
+	InProgress string
+	InReview   string
+	Done       string
+	ByName     map[string]string
 }
 
 type WorkflowStateID struct {

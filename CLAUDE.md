@@ -6,7 +6,7 @@ Autonomous Linear-to-PR agent in Go. Polls Linear (or GitHub Issues / Jira) for 
 
 ```
 ticket loop  → source.Fetch → pipeline.process (bounded goroutine)
-  → repo.Resolve → repo.CreateOrResumeWorktree → agent.Run → check output
+  → source.MarkInProgress → repo.Resolve → repo.CreateOrResumeWorktree → agent.Run → check output
   → (optional) review.Gate → commit/push → gh pr create → source.MarkReady
 PR loop      (AUTO_ITERATE_PRS) → watch.Scan → pipeline.iteratePR → push to the same branch
 sweep loop   (SWEEP_ENABLED)    → scheduler.Plan → pipeline.processSweepTask → maintenance PR

@@ -22,7 +22,7 @@ You: Move 3 tickets to "Next" → go to sleep
 
 Noctra:
   1. Polls Linear for tickets in "Next" (or carrying a trigger label)
-  2. Creates an isolated git worktree per ticket
+  2. Moves each ticket to "In Progress" and creates an isolated git worktree for it
   3. Runs your agent: it reads the ticket, plans, implements and self-reviews
   4. (Optional) Gemini reviews the diff; the agent gets a fix pass if it finds issues
   5. Pushes the branch and opens a PR

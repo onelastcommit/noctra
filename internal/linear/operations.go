@@ -6,16 +6,20 @@ import (
 	"sort"
 )
 
-func (c *Client) ResolveStateIDs(ctx context.Context, teamKey, triggerName, inReviewName, doneName string) (StateIDs, error) {
+func (c *Client) ResolveStateIDs(ctx context.Context, teamKey, triggerName, inProgressName, inReviewName, doneName string) (StateIDs, error) {
 	states, err := c.TeamWorkflowStates(ctx, teamKey)
 	if err != nil {
 		return StateIDs{}, err
 	}
 
-	var ids StateIDs
+	ids := StateIDs{ByName: make(map[string]string, len(states))}
 	available := make([]string, 0, len(states))
 	for _, s := range states {
 		available = append(available, s.Name)
+		ids.ByName[s.Name] = s.ID
+		if inProgressName != "" && s.Name == inProgressName {
+			ids.InProgress = s.ID
+		}
 		switch s.Name {
 		case triggerName:
 			ids.Trigger = s.ID
@@ -88,7 +92,7 @@ func (c *Client) ResolveStateID(ctx context.Context, teamKey, stateName string) 
 func (c *Client) FetchTriggerIssues(ctx context.Context, stateName string) ([]Issue, error) {
 	query := `query($state: String!) {
 	  teams { nodes { issues(filter: { state: { name: { eq: $state } } }, orderBy: updatedAt, first: 20) {
-	    nodes { id identifier title description url project { name description content } comments(last: 50) { nodes { body user { name } } } labels { nodes { name } } }
+	    nodes { id identifier title description url project { name description content } state { name } comments(last: 50) { nodes { body user { name } } } labels { nodes { name } } }
 	  } } }
 	}`
 
@@ -373,7 +377,7 @@ func (c *Client) UpdateProjectContent(ctx context.Context, projectID, content st
 func (c *Client) FetchLabeledIssues(ctx context.Context, labelName string) ([]Issue, error) {
 	query := `query($label: String!) {
 	  teams { nodes { issues(filter: { labels: { name: { eq: $label } } }, orderBy: updatedAt, first: 20) {
-	    nodes { id identifier title description url project { name description content } comments(last: 50) { nodes { body user { name } } } labels { nodes { name } } }
+	    nodes { id identifier title description url project { name description content } state { name } comments(last: 50) { nodes { body user { name } } } labels { nodes { name } } }
 	  } } }
 	}`
 

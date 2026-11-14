@@ -12,6 +12,8 @@ import (
 	"github.com/onelastcommit/noctra/internal/repo"
 )
 
+const inProgressLabelColour = "fbca04"
+
 type GitHubIssuesSource struct {
 	cfg GitHubIssuesConfig
 }
@@ -100,6 +102,45 @@ func (s *GitHubIssuesSource) BackToTrigger(ctx context.Context, ticket Ticket, b
 	return s.Comment(ctx, ticket, body)
 }
 
+func (s *GitHubIssuesSource) MarkInProgress(ctx context.Context, ticket Ticket) error {
+	if s.cfg.InProgressLabel == "" {
+		return nil
+	}
+	meta, err := githubTicketMeta(ticket)
+	if err != nil {
+		return err
+	}
+	if err := s.addLabel(ctx, meta, s.cfg.InProgressLabel); err == nil {
+		return nil
+	}
+	if err := runGH(ctx, meta.OwnerRepo, "label", "create", s.cfg.InProgressLabel,
+		"--repo", meta.OwnerRepo,
+		"--color", inProgressLabelColour,
+		"--description", "Noctra is working on this issue"); err != nil {
+		return err
+	}
+	return s.addLabel(ctx, meta, s.cfg.InProgressLabel)
+}
+
+func (s *GitHubIssuesSource) ReleaseInProgress(ctx context.Context, ticket Ticket) error {
+	if s.cfg.InProgressLabel == "" {
+		return nil
+	}
+	meta, err := githubTicketMeta(ticket)
+	if err != nil {
+		return err
+	}
+	return runGH(ctx, meta.OwnerRepo, "issue", "edit", strconv.Itoa(meta.Number),
+		"--repo", meta.OwnerRepo,
+		"--remove-label", s.cfg.InProgressLabel)
+}
+
+func (s *GitHubIssuesSource) addLabel(ctx context.Context, meta githubMeta, label string) error {
+	return runGH(ctx, meta.OwnerRepo, "issue", "edit", strconv.Itoa(meta.Number),
+		"--repo", meta.OwnerRepo,
+		"--add-label", label)
+}
+
 func (s *GitHubIssuesSource) MarkReady(ctx context.Context, ticket Ticket, info ReadyInfo) error {
 	meta, err := githubTicketMeta(ticket)
 	if err != nil {
@@ -108,6 +149,9 @@ func (s *GitHubIssuesSource) MarkReady(ctx context.Context, ticket Ticket, info 
 	firstErr := runGH(ctx, meta.OwnerRepo, "issue", "edit", strconv.Itoa(meta.Number),
 		"--repo", meta.OwnerRepo,
 		"--remove-label", s.cfg.TriggerLabel)
+	if err := s.ReleaseInProgress(ctx, ticket); err != nil && firstErr == nil {
+		firstErr = err
+	}
 	body := fmt.Sprintf(
 		"🌙 **Noctra created a PR** (via %s)\n\n**PR:** %s\n\nRemoved trigger label `%s`. Ready for your review!",
 		info.BackendLabel, info.PRURL, s.cfg.TriggerLabel)

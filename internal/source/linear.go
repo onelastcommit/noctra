@@ -32,7 +32,7 @@ func (s *LinearSource) Prepare(ctx context.Context) error {
 	if s.cfg.TriggerMode == "label" {
 		triggerStateName = ""
 	}
-	states, err := s.client.ResolveStateIDs(ctx, s.cfg.TeamKey, triggerStateName, s.cfg.InReviewState, s.cfg.DoneState)
+	states, err := s.client.ResolveStateIDs(ctx, s.cfg.TeamKey, triggerStateName, s.cfg.InProgressState, s.cfg.InReviewState, s.cfg.DoneState)
 	if err != nil {
 		return fmt.Errorf("resolve linear states: %w", err)
 	}
@@ -115,6 +115,27 @@ func (s *LinearSource) BackToTrigger(ctx context.Context, ticket Ticket, body st
 	return firstErr
 }
 
+func (s *LinearSource) MarkInProgress(ctx context.Context, ticket Ticket) error {
+	if s.states.InProgress == "" || ticket.State == s.cfg.InProgressState {
+		return nil
+	}
+	return s.client.SetState(ctx, ticket.ID, s.states.InProgress)
+}
+
+func (s *LinearSource) ReleaseInProgress(ctx context.Context, ticket Ticket) error {
+	if s.states.InProgress == "" {
+		return nil
+	}
+	target := s.states.Trigger
+	if s.cfg.TriggerMode == "label" {
+		target = s.states.ByName[ticket.State]
+	}
+	if target == "" || target == s.states.InProgress {
+		return nil
+	}
+	return s.client.SetState(ctx, ticket.ID, target)
+}
+
 func (s *LinearSource) MarkReady(ctx context.Context, ticket Ticket, info ReadyInfo) error {
 	var firstErr error
 	if s.cfg.TriggerMode == "label" && s.triggerLabelID != "" {
@@ -189,6 +210,10 @@ func linearTicket(issue linear.Issue) Ticket {
 	for _, c := range issue.Comments.Nodes {
 		comments = append(comments, linearComment(c))
 	}
+	var state string
+	if issue.State != nil {
+		state = issue.State.Name
+	}
 	return Ticket{
 		Source:      "linear",
 		ID:          issue.ID,
@@ -196,6 +221,7 @@ func linearTicket(issue linear.Issue) Ticket {
 		Title:       issue.Title,
 		Description: issue.Description,
 		URL:         issue.URL,
+		State:       state,
 		ProjectName: issue.ProjectName(),
 		RepoRef:     repoRef,
 		RepoBranch:  repoBranch,

@@ -74,6 +74,7 @@ type Pipeline struct {
 	failedAttempts    map[string]int
 	approvedPlans     map[string]string
 	skipped           map[string]struct{}
+	inProgress        map[string]struct{}
 	totalDispatches   int
 	dispatchWindow    time.Time
 	dispatchCapped    bool
@@ -123,6 +124,7 @@ func New(cfg *config.Config) *Pipeline {
 		killed:         map[string]struct{}{},
 		failedAttempts: map[string]int{},
 		skipped:        map[string]struct{}{},
+		inProgress:     map[string]struct{}{},
 		sessionStart:   time.Now(),
 		store:          store,
 	}
@@ -232,6 +234,10 @@ func (p *Pipeline) Run(ctx context.Context) error {
 			p.labelID = ls.TriggerLabelID()
 			p.planConfirmLabelID = ls.PlanConfirmLabelID()
 			slog.Info("resolved Linear source", "trigger_mode", p.cfg.TriggerMode, "in_review", p.cfg.InReviewState)
+			if p.states.InProgress == "" {
+				slog.Warn("in-progress state not found — tickets will stay in their column while the agent works",
+					"state", p.cfg.InProgressState)
+			}
 			if p.cfg.TriggerMode == "label" {
 				slog.Info("resolved Linear label", "label", p.cfg.TriggerLabel, "id", p.labelID)
 			}
@@ -704,24 +710,27 @@ func buildTicketSources(cfg *config.Config, linearClient *linear.Client) []sourc
 				TriggerMode:      cfg.TriggerMode,
 				TriggerState:     cfg.TriggerState,
 				TriggerLabel:     cfg.TriggerLabel,
+				InProgressState:  cfg.InProgressState,
 				InReviewState:    cfg.InReviewState,
 				DoneState:        cfg.DoneState,
 				PlanConfirmLabel: cfg.PlanConfirmLabel,
 			}))
 		case "github":
 			sources = append(sources, source.NewGitHubIssues(source.GitHubIssuesConfig{
-				Repos:        cfg.GitHubIssuesRepos,
-				TriggerLabel: cfg.GitHubTriggerLabel,
+				Repos:           cfg.GitHubIssuesRepos,
+				TriggerLabel:    cfg.GitHubTriggerLabel,
+				InProgressLabel: cfg.GitHubInProgressLabel,
 			}))
 		case "jira":
 			sources = append(sources, source.NewJira(source.JiraConfig{
-				BaseURL:        cfg.JiraBaseURL,
-				UserEmail:      cfg.JiraUserEmail,
-				APIToken:       cfg.JiraAPIToken,
-				Project:        cfg.JiraProject,
-				TriggerStatus:  cfg.JiraTriggerStatus,
-				TriggerLabel:   cfg.JiraTriggerLabel,
-				InReviewStatus: cfg.JiraInReviewStatus,
+				BaseURL:          cfg.JiraBaseURL,
+				UserEmail:        cfg.JiraUserEmail,
+				APIToken:         cfg.JiraAPIToken,
+				Project:          cfg.JiraProject,
+				TriggerStatus:    cfg.JiraTriggerStatus,
+				TriggerLabel:     cfg.JiraTriggerLabel,
+				InReviewStatus:   cfg.JiraInReviewStatus,
+				InProgressStatus: cfg.JiraInProgressStatus,
 			}))
 		}
 	}
@@ -797,6 +806,7 @@ func (p *Pipeline) banner() {
 	} else {
 		fmt.Printf("   Watching:       %q column\n", p.cfg.TriggerState)
 	}
+	fmt.Printf("   In progress:    %s\n", inProgressSummary(p.cfg, p.states))
 	fmt.Printf("   Agent:          %s\n", agentMode)
 	fmt.Printf("   Plugins:        %s\n", pluginSummary(p.cfg.PluginPacks, p.plugins, p.pluginFailures, p.pluginSkipped))
 	fmt.Printf("   Language:       %s\n", englishLabel(p.cfg.EnglishVariant))
