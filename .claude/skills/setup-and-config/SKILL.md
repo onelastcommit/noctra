@@ -148,7 +148,7 @@ LOG_DIR=/data/logs
 STATE_DB=/data/state.db
 GH_TOKEN=
 GIT_USER_NAME=Noctra
-GIT_USER_EMAIL=noctra@example.local
+GIT_USER_EMAIL=noctra@users.noreply.github.com
 ```
 
 ## Docker And Cloud Config
