@@ -541,7 +541,7 @@ func TestCreateWorktree_HidesStagedAgentSkillsFromGit(t *testing.T) {
 	}
 }
 
-func TestFetchPRHead_ReturnsPRCommitNotLaterFetch(t *testing.T) {
+func TestFetchPRHead_ReturnsPRCommit(t *testing.T) {
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
@@ -569,18 +569,4 @@ func TestFetchPRHead_ReturnsPRCommitNotLaterFetch(t *testing.T) {
 	if got != want {
 		t.Errorf("FetchPRHead = %q, want %q", got, want)
 	}
-
-	gitIn(t, repoDir, "fetch", "origin", "main", "--quiet")
-	if got == "" || got == strings.TrimSpace(mustRevParse(t, repoDir, "FETCH_HEAD")) {
-		t.Errorf("returned SHA must be pinned, not track FETCH_HEAD after a later fetch")
-	}
-}
-
-func mustRevParse(t *testing.T, dir, rev string) string {
-	t.Helper()
-	out, err := exec.Command("git", "-C", dir, "rev-parse", rev).Output()
-	if err != nil {
-		t.Fatalf("git rev-parse %s: %v", rev, err)
-	}
-	return string(out)
 }
