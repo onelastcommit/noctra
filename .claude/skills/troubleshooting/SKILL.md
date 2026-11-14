@@ -195,6 +195,8 @@ git branch -D noctra/eng-42 2>/dev/null || true
 git push origin --delete noctra/eng-42
 ```
 
+A ticket moves to **In Progress** while the agent works, and back to where it was picked up if the run ends without a PR. A crash or power loss mid-run skips that step, so a ticket can be left in **In Progress** with nothing working on it (or, on GitHub Issues, with the `in progress` label still on).
+
 Move the Linear ticket back to the trigger state, or requeue it from Telegram:
 
 ```text

@@ -19,6 +19,7 @@ noctra config set KEY=VALUE     # atomic write, keeps comments and other keys
 | `LINEAR_TEAM_KEY` | `ENG` | Prefix before ticket numbers |
 | `TRIGGER_MODE` | `state` | `state` watches a column; `label` watches a label in any column |
 | `TRIGGER_STATE` / `TRIGGER_LABEL` | `Next` / — | What to watch. The label is removed after dispatch |
+| `IN_PROGRESS_STATE` | `In Progress` | Set while the agent works; a run that ends without a PR moves the ticket back. Jira uses `JIRA_IN_PROGRESS_STATUS`, GitHub Issues adds the `GITHUB_IN_PROGRESS_LABEL` label |
 | `IN_REVIEW_STATE` | `In Review` | Set once the PR exists |
 | `MAX_CONCURRENT` | `3` | Tickets in flight at once |
 | `AGENT_BACKEND` | `claude` | `claude`, `codex`, `copilot` or `antigravity` |

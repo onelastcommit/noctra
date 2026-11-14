@@ -627,7 +627,7 @@ func TestResolveStateIDs_SkipsTriggerWhenEmpty(t *testing.T) {
 		},
 	})
 
-	ids, err := client.ResolveStateIDs(context.Background(), "ENG", "", "In Review", "Done")
+	ids, err := client.ResolveStateIDs(context.Background(), "ENG", "", "", "In Review", "Done")
 	if err != nil {
 		t.Fatalf("ResolveStateIDs: %v", err)
 	}
@@ -639,6 +639,45 @@ func TestResolveStateIDs_SkipsTriggerWhenEmpty(t *testing.T) {
 	}
 	if ids.Done != "s_done" {
 		t.Errorf("Done: got %q, want %q", ids.Done, "s_done")
+	}
+}
+
+func TestResolveStateIDs_ResolvesOptionalInProgress(t *testing.T) {
+	client := fakeServer(t, struct {
+		authHeader string
+		query      string
+		variables  map[string]any
+	}{
+		authHeader: "k",
+		query:      "teams",
+	}, map[string]any{
+		"data": map[string]any{
+			"teams": map[string]any{
+				"nodes": []map[string]any{{
+					"key": "ENG",
+					"states": map[string]any{
+						"nodes": []map[string]any{
+							{"id": "s_next", "name": "Next"},
+							{"id": "s_progress", "name": "In Progress"},
+							{"id": "s_review", "name": "In Review"},
+						},
+					},
+				}},
+			},
+		},
+	})
+
+	ids, err := client.ResolveStateIDs(context.Background(), "ENG", "Next", "In Progress", "In Review", "")
+	if err != nil {
+		t.Fatalf("ResolveStateIDs: %v", err)
+	}
+	if ids.InProgress != "s_progress" || ids.ByName["Next"] != "s_next" {
+		t.Fatalf("ids = %+v", ids)
+	}
+
+	ids, err = client.ResolveStateIDs(context.Background(), "ENG", "Next", "Doing", "In Review", "")
+	if err != nil || ids.InProgress != "" {
+		t.Fatalf("a missing in-progress state must not fail startup: ids = %+v, err = %v", ids, err)
 	}
 }
 

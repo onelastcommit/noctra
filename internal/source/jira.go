@@ -82,6 +82,28 @@ func (s *JiraSource) BackToTrigger(ctx context.Context, ticket Ticket, body stri
 	return s.Comment(ctx, ticket, body)
 }
 
+func (s *JiraSource) MarkInProgress(ctx context.Context, ticket Ticket) error {
+	if s.cfg.InProgressStatus == "" || sameStatus(ticket.State, s.cfg.InProgressStatus) {
+		return nil
+	}
+	return s.transitionTo(ctx, ticket.Identifier, s.cfg.InProgressStatus)
+}
+
+func (s *JiraSource) ReleaseInProgress(ctx context.Context, ticket Ticket) error {
+	target := s.cfg.TriggerStatus
+	if s.cfg.TriggerLabel != "" {
+		target = ticket.State
+	}
+	if strings.TrimSpace(target) == "" || sameStatus(target, s.cfg.InProgressStatus) {
+		return nil
+	}
+	return s.transitionTo(ctx, ticket.Identifier, target)
+}
+
+func sameStatus(a, b string) bool {
+	return strings.EqualFold(strings.TrimSpace(a), strings.TrimSpace(b))
+}
+
 func (s *JiraSource) MarkReady(ctx context.Context, ticket Ticket, info ReadyInfo) error {
 	var firstErr error
 	if err := s.transitionTo(ctx, ticket.Identifier, s.cfg.InReviewStatus); err != nil {
@@ -138,6 +160,7 @@ func (s *JiraSource) ticket(issue jiraIssue) Ticket {
 		Title:       issue.Fields.Summary,
 		Description: desc,
 		URL:         s.cfg.BaseURL + "/browse/" + issue.Key,
+		State:       issue.Fields.Status.Name,
 		ProjectName: issue.Fields.Project.Key,
 		RepoRef:     repoRef,
 		RepoBranch:  repoBranch,

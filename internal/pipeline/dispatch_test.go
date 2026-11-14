@@ -226,6 +226,10 @@ func (s fetchSource) RemovePlanLabel(context.Context, source.Ticket) error { ret
 
 func (s fetchSource) BackToTrigger(context.Context, source.Ticket, string) error { return nil }
 
+func (s fetchSource) MarkInProgress(context.Context, source.Ticket) error { return nil }
+
+func (s fetchSource) ReleaseInProgress(context.Context, source.Ticket) error { return nil }
+
 func (s fetchSource) MarkReady(context.Context, source.Ticket, source.ReadyInfo) error { return nil }
 
 func (s fetchSource) Comment(context.Context, source.Ticket, string) error { return nil }

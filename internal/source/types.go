@@ -15,6 +15,8 @@ type TicketSource interface {
 	FetchComments(context.Context, Ticket) ([]Comment, error)
 	RemovePlanLabel(context.Context, Ticket) error
 	BackToTrigger(context.Context, Ticket, string) error
+	MarkInProgress(context.Context, Ticket) error
+	ReleaseInProgress(context.Context, Ticket) error
 	MarkReady(context.Context, Ticket, ReadyInfo) error
 	Comment(context.Context, Ticket, string) error
 }
@@ -49,6 +51,7 @@ type Ticket struct {
 	Title       string
 	Description string
 	URL         string
+	State       string
 	ProjectName string
 	RepoRef     string
 	RepoBranch  string
@@ -159,18 +162,20 @@ func IsApprovalComment(body string) bool {
 }
 
 type GitHubIssuesConfig struct {
-	Repos        []string
-	TriggerLabel string
+	Repos           []string
+	TriggerLabel    string
+	InProgressLabel string
 }
 
 type JiraConfig struct {
-	BaseURL        string
-	UserEmail      string
-	APIToken       string
-	Project        string
-	TriggerStatus  string
-	InReviewStatus string
-	TriggerLabel   string
+	BaseURL          string
+	UserEmail        string
+	APIToken         string
+	Project          string
+	TriggerStatus    string
+	InReviewStatus   string
+	TriggerLabel     string
+	InProgressStatus string
 }
 
 type LinearConfig struct {
@@ -178,6 +183,7 @@ type LinearConfig struct {
 	TriggerMode      string
 	TriggerState     string
 	TriggerLabel     string
+	InProgressState  string
 	InReviewState    string
 	DoneState        string
 	PlanConfirmLabel string
