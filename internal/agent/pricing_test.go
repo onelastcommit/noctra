@@ -10,10 +10,18 @@ func TestPricesForModel(t *testing.T) {
 		model string
 		want  float64
 	}{
-		{"claude-opus-5", 75},
-		{"claude-sonnet-5", 15},
-		{"claude-haiku-4-5-20251001", 4},
-		{"CLAUDE-OPUS-5", 75},
+		{"claude-opus-5-5", 20},
+		{"claude-opus-5-5[1m]", 20},
+		{"CLAUDE-OPUS-5-5", 20},
+		{"claude-opus-5", 25},
+		{"claude-opus-4-8", 25},
+		{"claude-fable-5-2", 40},
+		{"claude-fable-5-1", 50},
+		{"claude-sonnet-5-5", 10},
+		{"claude-sonnet-5", 10},
+		{"claude-sonnet-4-6", 15},
+		{"claude-haiku-5-5", 0.50},
+		{"claude-haiku-4-5-20251001", 5},
 		{"", 15},
 		{"some-unknown-model", 15},
 	}
@@ -25,9 +33,9 @@ func TestPricesForModel(t *testing.T) {
 }
 
 func TestModelPricesEstimate(t *testing.T) {
-	p := PricesForModel("claude-sonnet-5")
+	p := PricesForModel("claude-opus-5-5")
 	got := p.Estimate(1_000_000, 1_000_000, 1_000_000, 1_000_000)
-	want := 3.0 + 15.0 + 3.75 + 0.30
+	want := 4.0 + 20.0 + 5.0 + 0.20
 	if math.Abs(got-want) > 1e-9 {
 		t.Errorf("Estimate = %v, want %v", got, want)
 	}

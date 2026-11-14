@@ -15,9 +15,17 @@ type modelPriceEntry struct {
 }
 
 var modelPriceTable = []modelPriceEntry{
-	{"opus", ModelPrices{InputPerMTok: 15, OutputPerMTok: 75, CacheWritePerMTok: 18.75, CacheReadPerMTok: 1.50}},
+	{"fable-5-2", ModelPrices{InputPerMTok: 8, OutputPerMTok: 40, CacheWritePerMTok: 10, CacheReadPerMTok: 0.20}},
+	{"mythos-5-2", ModelPrices{InputPerMTok: 8, OutputPerMTok: 40, CacheWritePerMTok: 10, CacheReadPerMTok: 0.20}},
+	{"fable", ModelPrices{InputPerMTok: 10, OutputPerMTok: 50, CacheWritePerMTok: 12.50, CacheReadPerMTok: 0.25}},
+	{"mythos", ModelPrices{InputPerMTok: 10, OutputPerMTok: 50, CacheWritePerMTok: 12.50, CacheReadPerMTok: 0.25}},
+	{"opus-5-5", ModelPrices{InputPerMTok: 4, OutputPerMTok: 20, CacheWritePerMTok: 5, CacheReadPerMTok: 0.20}},
+	{"opus", ModelPrices{InputPerMTok: 5, OutputPerMTok: 25, CacheWritePerMTok: 6.25, CacheReadPerMTok: 0.50}},
+	{"sonnet-5-5", ModelPrices{InputPerMTok: 2, OutputPerMTok: 10, CacheWritePerMTok: 2.50, CacheReadPerMTok: 0.10}},
+	{"sonnet-5", ModelPrices{InputPerMTok: 2, OutputPerMTok: 10, CacheWritePerMTok: 2.50, CacheReadPerMTok: 0.20}},
 	{"sonnet", ModelPrices{InputPerMTok: 3, OutputPerMTok: 15, CacheWritePerMTok: 3.75, CacheReadPerMTok: 0.30}},
-	{"haiku", ModelPrices{InputPerMTok: 0.80, OutputPerMTok: 4, CacheWritePerMTok: 1.00, CacheReadPerMTok: 0.08}},
+	{"haiku-5-5", ModelPrices{InputPerMTok: 0.10, OutputPerMTok: 0.50, CacheWritePerMTok: 0.125, CacheReadPerMTok: 0.01}},
+	{"haiku", ModelPrices{InputPerMTok: 1, OutputPerMTok: 5, CacheWritePerMTok: 1.25, CacheReadPerMTok: 0.10}},
 }
 
 var fallbackModelPrices = ModelPrices{InputPerMTok: 3, OutputPerMTok: 15, CacheWritePerMTok: 3.75, CacheReadPerMTok: 0.30}
