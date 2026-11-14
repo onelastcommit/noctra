@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"net"
 	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -660,6 +662,9 @@ func englishLabel(variant string) string {
 
 func (p *Pipeline) runAgent(ctx context.Context, backend agent.Backend, opts agent.RunOptions) (agent.Usage, error) {
 	opts.Prompt += agent.LanguageSection(p.cfg.EnglishVariant)
+	if opts.Model == "" {
+		opts.Model = p.cfg.ModelFor(backend.Name())
+	}
 	if !opts.NoTools {
 		opts.PluginDirs = p.pluginDirs()
 	}
@@ -737,6 +742,9 @@ func (p *Pipeline) banner() {
 	agentMode := fmt.Sprintf("per-ticket via label (default: %s)", p.agent.Label())
 	if p.cfg.UseAgentTeams {
 		agentMode += " + agent teams"
+	}
+	if models := modelSummary(p.cfg.AgentModels); models != "" {
+		agentMode += ", models: " + models
 	}
 	autoIterMode := "Disabled"
 	if p.watcher != nil {
@@ -938,4 +946,13 @@ func githubIdentity() string {
 		return "personal credentials (gh / git on this host)"
 	}
 	return fmt.Sprintf("%s via GitHub App (linked by %s, %s)", sess.Instance.BotLogin, sess.Instance.GitHubLogin, sess.Instance.ServiceURL)
+}
+
+func modelSummary(models map[string]string) string {
+	backends := slices.Sorted(maps.Keys(models))
+	parts := make([]string, 0, len(backends))
+	for _, backend := range backends {
+		parts = append(parts, backend+"="+models[backend])
+	}
+	return strings.Join(parts, ", ")
 }

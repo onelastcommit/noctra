@@ -11,6 +11,8 @@ Almost everything in `internal/agent` is **shared**: the prompt builders (`Build
 
 1. **Invocation** — `claudeStreamArgs` (`claude --print --output-format stream-json --verbose`), `codexArgs` (`codex exec --dangerously-bypass-approvals-and-sandbox <prompt>`), `copilotArgs` (`copilot --allow-all-tools --no-ask-user --output-format json -p <prompt>`), `antigravityArgs` (`agy --dangerously-skip-permissions --output-format stream-json --print <prompt>`). Codex, Copilot and Antigravity go through the shared `runCLI` (timeout → `ErrTimedOut`, DEBUG header, stderr streamed live, optional `streamParser` for stdout); Claude always uses `runStream`, which also enforces `AGENT_MAX_TOKENS` when set.
 
+**Model choice.** `<BACKEND>_MODEL` (`config.ModelEnvKey`) sets each backend's model. `p.runAgent` fills `RunOptions.Model` from `cfg.ModelFor(backend.Name())` only when the caller left it empty, so the triage model still wins. It is keyed by backend so a `CLAUDE_MODEL` never reaches a ticket labelled `agent:codex`.
+
 **Quick, tool-less runs.** `RunOptions.Model` and `RunOptions.NoTools` serve PR triage. `NoTools` swaps each CLI's auto-approval for a mode with no tools at all, because the triage prompt carries untrusted comment text. Each was verified against a "read this file" injection:
 - Claude: `--tools "" --strict-mcp-config`. Without the latter, user MCP servers stay loaded (and a Haiku answer cost ~$0.19 instead of ~$0.002).
 - Codex: `--ignore-user-config` (drops user MCP servers and plugins), `--disable` for its shell, exec, apps, plugins, browser, computer-use and image features (`codexToolFeatures`), `web_search="disabled"`, plus `--sandbox read-only --skip-git-repo-check`. A read-only sandbox alone still lets the shell read any file.
