@@ -78,8 +78,8 @@ func processMergedPR(ctx context.Context, store *state.Store, resolver *repo.Res
 	repoDir := resolved.Path
 
 	prNumStr := prURL[strings.LastIndex(prURL, "/")+1:]
-	fetchCmd := exec.CommandContext(ctx, "git", "-C", repoDir, "fetch", "origin", fmt.Sprintf("pull/%s/head", prNumStr))
-	if err := fetchCmd.Run(); err != nil {
+	headSHA, err := repo.FetchPRHead(ctx, repoDir, prNumStr)
+	if err != nil {
 		return fmt.Errorf("git fetch PR head (pull/%s/head): %w", prNumStr, err)
 	}
 
@@ -87,7 +87,7 @@ func processMergedPR(ctx context.Context, store *state.Store, resolver *repo.Res
 		return fmt.Errorf("no LastPushedSHA recorded for this PR; cannot compute human edits")
 	}
 
-	diffStr, err := humanEditsDiff(ctx, repoDir, cursor.LastPushedSHA, "FETCH_HEAD")
+	diffStr, err := humanEditsDiff(ctx, repoDir, cursor.LastPushedSHA, headSHA)
 	if err != nil {
 		return err
 	}

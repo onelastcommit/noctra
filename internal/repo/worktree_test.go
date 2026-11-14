@@ -540,3 +540,33 @@ func TestCreateWorktree_HidesStagedAgentSkillsFromGit(t *testing.T) {
 		t.Fatalf("staged skills visible to git in the worktree: %q", status)
 	}
 }
+
+func TestFetchPRHead_ReturnsPRCommit(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	repoDir := newFixtureRepo(t)
+	gitIn(t, repoDir, "checkout", "-q", "-b", "feature")
+	if err := os.WriteFile(filepath.Join(repoDir, "pr.md"), []byte("pr"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	gitIn(t, repoDir, "add", "-A")
+	gitIn(t, repoDir, "commit", "-m", "pr commit", "--quiet")
+	gitIn(t, repoDir, "update-ref", "refs/pull/7/head", "HEAD")
+	gitIn(t, repoDir, "checkout", "-q", "main")
+
+	out, err := exec.Command("git", "-C", repoDir, "rev-parse", "refs/pull/7/head").Output()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := strings.TrimSpace(string(out))
+
+	got, err := FetchPRHead(context.Background(), repoDir, "7")
+	if err != nil {
+		t.Fatalf("FetchPRHead: %v", err)
+	}
+	if got != want {
+		t.Errorf("FetchPRHead = %q, want %q", got, want)
+	}
+}
