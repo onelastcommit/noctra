@@ -176,6 +176,7 @@ type Config struct {
 	MainBranch string
 
 	AgentBackend  string
+	AgentModels   map[string]string
 	PluginPacks   []string
 	PluginsExtra  []string
 	PluginsDir    string
@@ -282,6 +283,7 @@ func Load(scriptDir string) (*Config, error) {
 		MainBranch: getenv(fileEnv, "MAIN_BRANCH", DefaultMainBranch),
 
 		AgentBackend:  strings.ToLower(strings.TrimSpace(getenv(fileEnv, "AGENT_BACKEND", DefaultAgentBackend))),
+		AgentModels:   agentModels(fileEnv),
 		UseAgentTeams: getbool(fileEnv, "USE_AGENT_TEAMS", false),
 		PluginPacks:   lowerList(getlist(fileEnv, "AGENT_PLUGIN_PACKS")),
 		PluginsExtra:  getlist(fileEnv, "AGENT_PLUGINS_EXTRA"),
@@ -511,6 +513,24 @@ func (c *Config) AgentCLI() string {
 		return cli
 	}
 	return agentCLIs[DefaultAgentBackend]
+}
+
+func ModelEnvKey(backend string) string {
+	return strings.ToUpper(backend) + "_MODEL"
+}
+
+func agentModels(fileEnv map[string]string) map[string]string {
+	models := map[string]string{}
+	for backend := range agentCLIs {
+		if model := strings.TrimSpace(getenv(fileEnv, ModelEnvKey(backend), "")); model != "" {
+			models[backend] = model
+		}
+	}
+	return models
+}
+
+func (c *Config) ModelFor(backend string) string {
+	return c.AgentModels[backend]
 }
 
 func (c *Config) RequiredCLIs() []string {

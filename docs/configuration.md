@@ -22,6 +22,7 @@ noctra config set KEY=VALUE     # atomic write, keeps comments and other keys
 | `IN_REVIEW_STATE` | `In Review` | Set once the PR exists |
 | `MAX_CONCURRENT` | `3` | Tickets in flight at once |
 | `AGENT_BACKEND` | `claude` | `claude`, `codex`, `copilot` or `antigravity` |
+| `CLAUDE_MODEL`, `CODEX_MODEL`, `COPILOT_MODEL`, `ANTIGRAVITY_MODEL` | CLI default | Model passed to that backend's CLI as `--model` |
 
 State and label names are case-sensitive. Repos are routed by each Linear project's `Repo:` directive (see the [README](../README.md#map-projects-to-repos)), with `REPO_PATH` as a single-repo fallback. GitHub Issues use their own repo unless the issue body has a `Repo:` line; Jira reads `Repo:` from the issue description.
 

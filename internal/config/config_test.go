@@ -1115,3 +1115,23 @@ func hasFixedDefault(arg ast.Expr) bool {
 	})
 	return !isPath
 }
+
+func TestLoad_AgentModelsPerBackend(t *testing.T) {
+	isolateEnv(t)
+
+	dir := t.TempDir()
+	writeFile(t, filepath.Join(dir, ".env"), `
+LINEAR_API_KEY="lin_xyz"
+CLAUDE_MODEL="claude-sonnet-5-5"
+CODEX_MODEL=" gpt-5.5 "
+`)
+	cfg, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	for backend, want := range map[string]string{"claude": "claude-sonnet-5-5", "codex": "gpt-5.5", "copilot": "", "antigravity": ""} {
+		if got := cfg.ModelFor(backend); got != want {
+			t.Errorf("ModelFor(%q) = %q, want %q", backend, got, want)
+		}
+	}
+}
