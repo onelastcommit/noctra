@@ -58,6 +58,7 @@ func (c *Client) ListNoctraPRs(ctx context.Context, repoURLs []string) ([]PR, er
 			"--repo", ownerRepo,
 			"--author", c.author(),
 			"--state", "open",
+			"--limit", "1000",
 			"--json", "url,number,title,headRefName,body",
 		)
 		if err != nil {

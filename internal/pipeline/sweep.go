@@ -672,6 +672,13 @@ func (p *Pipeline) processSweepTask(ctx context.Context, job sweep.Job, identifi
 				logger.Error("git commit for review fixes failed", "err", err)
 				return
 			}
+		}
+		ahead, err := branchAhead(ctx, wt.Path, "origin/"+wt.Branch)
+		if err != nil {
+			logger.Error("git rev-list for review fixes failed", "err", err)
+			return
+		}
+		if ahead {
 			if err := runIn(ctx, wt.Path, "git", "push", "origin", wt.Branch); err != nil {
 				logger.Error("git push for review fixes failed", "err", err)
 				return

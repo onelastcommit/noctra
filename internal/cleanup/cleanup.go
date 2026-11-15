@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/onelastcommit/noctra/internal/config"
+	"github.com/onelastcommit/noctra/internal/github"
 	"github.com/onelastcommit/noctra/internal/repo"
 )
 
@@ -58,7 +59,7 @@ func Run(ctx context.Context, cfg *config.Config, force bool) error {
 
 			withPR, safe := partitionByOpenPR(ctx, r, branches)
 			if len(withPR) > 0 {
-				fmt.Println("    Skipping (have open PRs):")
+				fmt.Println("    Skipping (have open PRs, or PR lookup failed):")
 				for _, b := range withPR {
 					fmt.Printf("      - %s\n", b)
 				}
@@ -148,16 +149,26 @@ func unmergedNoctra(ctx context.Context, repoPath, mainBranch string) []string {
 func partitionByOpenPR(ctx context.Context, repoPath string, branches []string) (withPR, safe []string) {
 	remote, _ := outputOf(ctx, repoPath, "git", "remote", "get-url", "origin")
 	remote = strings.TrimSpace(remote)
-	for _, b := range branches {
-		hasPR := false
-		if remote != "" {
-			out, err := outputOf(ctx, repoPath, "gh", "pr", "list",
-				"--repo", remote, "--head", b, "--state", "open", "--json", "number")
-			if err == nil && strings.Contains(out, `"number"`) {
-				hasPR = true
-			}
+	return splitByOpenPR(branches, func(b string) (bool, error) {
+		if remote == "" {
+			return false, errors.New("no origin remote")
 		}
-		if hasPR {
+		cmd, err := github.CommandInDir(ctx, repoPath, "pr", "list",
+			"--repo", remote, "--head", b, "--state", "open", "--json", "number")
+		if err != nil {
+			return false, err
+		}
+		out, err := cmd.Output()
+		if err != nil {
+			return false, err
+		}
+		return strings.Contains(string(out), `"number"`), nil
+	})
+}
+
+func splitByOpenPR(branches []string, hasOpenPR func(string) (bool, error)) (withPR, safe []string) {
+	for _, b := range branches {
+		if open, err := hasOpenPR(b); err != nil || open {
 			withPR = append(withPR, b)
 		} else {
 			safe = append(safe, b)
