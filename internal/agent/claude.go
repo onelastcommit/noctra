@@ -155,10 +155,12 @@ func tailWorthy(ev claudeStreamEvent) bool {
 
 func (b claudeBackend) runStream(ctx context.Context, opts RunOptions, env []string) (Usage, error) {
 	runCtx, cancel := context.WithCancel(ctx)
-	if opts.Timeout > 0 {
-		runCtx, cancel = context.WithTimeout(ctx, opts.Timeout)
-	}
 	defer cancel()
+	if opts.Timeout > 0 {
+		var cancelTimeout context.CancelFunc
+		runCtx, cancelTimeout = context.WithTimeout(runCtx, opts.Timeout)
+		defer cancelTimeout()
+	}
 
 	cmd := exec.CommandContext(runCtx, b.CLI(), claudeStreamArgs(opts)...)
 	cmd.Dir = opts.Workdir

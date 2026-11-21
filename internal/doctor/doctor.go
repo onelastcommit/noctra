@@ -13,7 +13,9 @@ import (
 	"github.com/onelastcommit/noctra/internal/config"
 	"github.com/onelastcommit/noctra/internal/ghauth"
 	"github.com/onelastcommit/noctra/internal/linear"
+	"github.com/onelastcommit/noctra/internal/linearclient"
 	"github.com/onelastcommit/noctra/internal/plugins"
+	"github.com/onelastcommit/noctra/internal/state"
 )
 
 func gather(scriptDir string) []check {
@@ -217,14 +219,12 @@ func checkLinearKey(cfg *config.Config) check {
 	switch {
 	case cfg.ActorAppConfigured():
 		name = "LINEAR_OAUTH (actor=app)"
-		tm := linear.NewTokenManager(linear.TokenManagerConfig{
-			ClientID:     cfg.LinearOAuthClientID,
-			ClientSecret: cfg.LinearOAuthClientSecret,
-			RefreshToken: cfg.LinearOAuthRefreshToken,
-			Scope:        cfg.LinearOAuthScope,
-		})
-		client = linear.New(cfg.LinearAPIKey)
-		client.TokenFn = tm.Token
+		store, err := state.OpenMigrating(cfg.StateDB, cfg.StateFile)
+		if err == nil {
+			defer func() { _ = store.Close() }()
+		}
+		client = linearclient.New(cfg, store)
+		client.FallbackAPIKey = ""
 		isOAuth = true
 	case cfg.LinearOAuthToken != "":
 		name = "LINEAR_OAUTH_TOKEN"
