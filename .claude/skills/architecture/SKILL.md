@@ -77,7 +77,7 @@ Noctra follows a convention of extracting logic into **pure, side-effect-free fu
 
 | Pure function | Package | What it does |
 |--------------|---------|-------------|
-| `claudeArgs` / `codexArgs` / `copilotArgs` | `internal/agent` | Build CLI argument slices |
+| `claudeStreamArgs` / `codexArgs` / `copilotArgs` / `antigravityArgs` | `internal/agent` | Build CLI argument slices |
 | `unitFile(exePath, pathEnv)` | `internal/service` | Render the systemd unit file |
 | `completionScript(shell)` | `cmd/noctra` | Generate shell-completion scripts |
 | `watch.diff` / `watch.actionable` | `internal/watch` | Classify PR changes, apply trusted-reviewer rules |

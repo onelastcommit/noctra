@@ -117,7 +117,7 @@ If every review errors or fails before useful comments appear:
 
 1. Confirm `GEMINI_API_KEY` is set only when the review gate is desired.
 2. Validate the key with a direct API call.
-3. Check Noctra's service log (`noctra logs`) for the `gemini review` lines. When the review passes, its raw response is also appended to the ticket log (`logs/ENG-42.log`) as a `--- Gemini review` block.
+3. Check Noctra's service log (`noctra logs`) for the `gemini review` lines. Once the run reaches the push, the review's raw response (or its request error), pass or fail, is also appended to the ticket log (`logs/ENG-42.log`) as a `--- Gemini review` block.
 4. If the diff is huge, split the ticket or reduce scope.
 
 ```bash

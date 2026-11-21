@@ -26,7 +26,7 @@ Almost everything in `internal/agent` is **shared**: the prompt builders (`Build
 **Tool lines.** Every tool call is logged live as one `[tool] <name>: <detail>` line (`agent.ToolLinePrefix`, `toolCallLine`), the detail being the command, path, pattern or URL, collapsed to one line and capped at 200 characters. Claude reads `tool_use` blocks, Copilot `tool.execution_start`, Antigravity tool `step_update`s; Codex's own transcript already shows each `exec`. `HasRateLimit` and `AuthFailureLine` skip tool lines (`withoutToolLines`), or a failed run whose agent ran `grep "rate limit"` would be treated as rate-limited.
 2. **Rate-limit parsing** — `claudeRateLimitRe` / `codexRateLimitRe` / `copilotRateLimitRe` / `antigravityRateLimitRe`, since the CLIs phrase quota errors differently.
 
-A new backend implements `Backend`, registers its name in `agent.New`, and adds its CLI to `config.RequiredCLIs` (the required set is `git` + `gh` + the selected agent CLI; `CheckCLIs`, `doctor` and the wizard surface it).
+A new backend implements `Backend`, registers its name in `agent.New`, and adds its CLI to the `config.agentCLIs` map (`config.RequiredCLIs` builds the required set: it is `git` + `gh` + the selected agent CLI; `CheckCLIs`, `doctor` and the wizard surface it).
 
 ## Per-backend quirks
 
@@ -41,7 +41,7 @@ The model a run used is read back per backend for PR footers; the [`naming`](../
 
 `AGENT_PLUGIN_PACKS` loads curated skills into every run (`internal/plugins`). `noctra setup` installs them right after writing `.env` (`setup.setUpPlugins`), `Pipeline.installPlugins` re-checks them at every start (instant when nothing changed), and `p.runAgent` puts their directories in `RunOptions.PluginDirs`, so a backend only decides how to deliver them:
 
-- **Claude:** one `--plugin-dir <dir>` per plugin, before `-p`, in both `claudeArgs` and `claudeStreamArgs`. Skills appear namespaced as `noctra-<plugin>:<skill>`.
+- **Claude:** one `--plugin-dir <dir>` per plugin, before `-p`, added to `claudeStreamArgs` by `claudePluginArgs`. Skills appear namespaced as `noctra-<plugin>:<skill>`.
 - **Codex, Copilot, Antigravity:** `defer stageSkills(opts)()` at the top of `Run` copies the skills into the worktree's `.agents/skills/` and removes them when the run ends.
 
 A new backend must do one of the two; if it reads neither, its runs silently get no skills. Catalogue rules:
