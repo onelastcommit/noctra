@@ -17,7 +17,7 @@
     },
     "humanizer": {
       "repo": "blader/humanizer",
-      "commit": "225a6f39ac85f76ee48dbad772ea4abe4ed6c9d8",
+      "commit": "a32f24407364c74c812b43c15926d638bee1e072",
       "licence": "MIT"
     },
     "impeccable": {
@@ -27,7 +27,7 @@
     },
     "marketingskills": {
       "repo": "coreyhaines31/marketingskills",
-      "commit": "96798cf38736ecdba015a1d2b0521b0c8f8f41dd",
+      "commit": "5b2b400eec1e7e1cec76245a715d0b0d4fd2a9c1",
       "licence": "MIT"
     },
     "mattpocock-skills": {
