@@ -36,7 +36,7 @@ RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH:-$(go env GOARCH)}
 # declares no `engines` field, so an older base installs cleanly yet fails at
 # runtime. We pin Node 24 (current LTS), comfortably above that floor; claude/codex
 # are happy on it too.
-FROM node:24-bookworm-slim AS runtime
+FROM node:26-bookworm-slim AS runtime
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl git gnupg \
